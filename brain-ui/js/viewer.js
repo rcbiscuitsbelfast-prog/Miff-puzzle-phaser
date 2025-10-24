@@ -13,11 +13,15 @@ export class BrainViewer {
         this.brainModel = null;
         this.greenOverlay = [];
         this.matrixOverlay = [];
+        this.jigsawPieces = [];
         this.clock = new THREE.Clock();
         this.overlayTime = 0;
         this.matrixCanvas = null;
         this.matrixTexture = null;
         this.matrixCtx = null;
+        this.raycaster = new THREE.Raycaster();
+        this.mouse = new THREE.Vector2();
+        this.puzzleExploded = false;
         
         this.init();
         this.setupEventListeners();
@@ -316,60 +320,100 @@ export class BrainViewer {
                 if (child.parent) child.parent.add(matrixMesh);
                 else this.scene.add(matrixMesh);
                 
-                // LAYER 3: Jigsaw puzzle pattern overlay (1.28x)
-                const jigsawMaterial = new THREE.ShaderMaterial({
-                    uniforms: {
-                        time: { value: 0 }
-                    },
-                    vertexShader: `
-                        varying vec2 vUv;
-                        varying vec3 vWorldPosition;
-                        
-                        void main() {
-                            vUv = uv;
-                            vec4 worldPos = modelMatrix * vec4(position, 1.0);
-                            vWorldPosition = worldPos.xyz;
-                            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                        }
-                    `,
-                    fragmentShader: `
-                        varying vec3 vWorldPosition;
-                        
-                        void main() {
-                            // Create 3x3 puzzle grid
-                            vec2 gridUV = fract(vWorldPosition.xy * 1.5);
-                            float edgeThickness = 0.05;
-                            
-                            // Puzzle piece edges (black lines)
-                            float edge = step(gridUV.x, edgeThickness) + step(gridUV.x, 1.0 - edgeThickness) +
-                                        step(gridUV.y, edgeThickness) + step(gridUV.y, 1.0 - edgeThickness);
-                            edge = clamp(edge, 0.0, 1.0);
-                            
-                            // White pieces with black edges
-                            vec3 color = mix(vec3(1.0), vec3(0.0), edge);
-                            float alpha = 0.3 + edge * 0.5;
-                            
-                            gl_FragColor = vec4(color, alpha);
-                        }
-                    `,
-                    transparent: true,
-                    side: THREE.DoubleSide,
-                    depthWrite: false,
-                    depthTest: true
-                });
+                // LAYER 3: Create 9 separate jigsaw pieces with picture texture
+                // We'll create 9 pieces in a 3x3 grid
+                const colors = [
+                    0xff6b6b, 0x4ecdc4, 0x95e1d3,
+                    0xf38181, 0xaa96da, 0xfcbad3,
+                    0xffffd2, 0xa8dadc, 0xe63946
+                ];
                 
-                const jigsawMesh = new THREE.Mesh(overlayGeometry.clone(), jigsawMaterial);
-                jigsawMesh.position.copy(child.position);
-                jigsawMesh.rotation.copy(child.rotation);
-                jigsawMesh.scale.copy(child.scale).multiplyScalar(1.28);
-                this.matrixOverlay.push(jigsawMesh);
-                
-                if (child.parent) child.parent.add(jigsawMesh);
-                else this.scene.add(jigsawMesh);
+                for (let i = 0; i < 9; i++) {
+                    const col = i % 3;
+                    const row = Math.floor(i / 3);
+                    
+                    // Create jigsaw piece material with unique color for each piece
+                    const pieceMaterial = new THREE.ShaderMaterial({
+                        uniforms: {
+                            time: { value: 0 },
+                            pieceColor: { value: new THREE.Color(colors[i]) },
+                            col: { value: col },
+                            row: { value: row }
+                        },
+                        vertexShader: `
+                            varying vec2 vUv;
+                            varying vec3 vWorldPosition;
+                            
+                            void main() {
+                                vUv = uv;
+                                vec4 worldPos = modelMatrix * vec4(position, 1.0);
+                                vWorldPosition = worldPos.xyz;
+                                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                            }
+                        `,
+                        fragmentShader: `
+                            uniform vec3 pieceColor;
+                            uniform float col;
+                            uniform float row;
+                            varying vec3 vWorldPosition;
+                            
+                            void main() {
+                                // Create 3x3 puzzle grid
+                                vec2 gridUV = fract(vWorldPosition.xy * 1.5);
+                                
+                                // Determine which piece this fragment belongs to
+                                vec2 pieceIndex = floor(vWorldPosition.xy * 1.5);
+                                float currentCol = mod(pieceIndex.x + 10.0, 3.0);
+                                float currentRow = mod(pieceIndex.y + 10.0, 3.0);
+                                
+                                // Only show this piece's region
+                                if (abs(currentCol - col) > 0.1 || abs(currentRow - row) > 0.1) {
+                                    discard;
+                                }
+                                
+                                // Jigsaw edge pattern
+                                float edgeThickness = 0.08;
+                                float edge = step(gridUV.x, edgeThickness) + step(1.0 - edgeThickness, gridUV.x) +
+                                            step(gridUV.y, edgeThickness) + step(1.0 - edgeThickness, gridUV.y);
+                                edge = clamp(edge, 0.0, 1.0);
+                                
+                                // Add tab/blank pattern for jigsaw look
+                                float tabX = step(0.4, gridUV.x) * step(gridUV.x, 0.6);
+                                float tabY = step(0.4, gridUV.y) * step(gridUV.y, 0.6);
+                                float tab = (tabX * step(gridUV.y, 0.1)) + (tabY * step(gridUV.x, 0.1));
+                                
+                                // Piece color with darker edges and subtle texture
+                                vec3 color = pieceColor * (0.8 + gridUV.x * 0.2);
+                                color = mix(color, vec3(0.2), edge * 0.7);
+                                
+                                float alpha = 0.95 - tab * 0.5;
+                                
+                                gl_FragColor = vec4(color, alpha);
+                            }
+                        `,
+                        transparent: true,
+                        side: THREE.DoubleSide,
+                        depthWrite: false,
+                        depthTest: true
+                    });
+                    
+                    const pieceMesh = new THREE.Mesh(overlayGeometry.clone(), pieceMaterial);
+                    pieceMesh.position.copy(child.position);
+                    pieceMesh.rotation.copy(child.rotation);
+                    pieceMesh.scale.copy(child.scale).multiplyScalar(1.28);
+                    
+                    pieceMesh.userData.isPuzzlePiece = true;
+                    pieceMesh.userData.pieceIndex = i;
+                    
+                    this.jigsawPieces.push(pieceMesh);
+                    
+                    if (child.parent) child.parent.add(pieceMesh);
+                    else this.scene.add(pieceMesh);
+                }
             }
         });
         
-        console.log('3 layers added: Green glow (1.22x) + Matrix letters (1.25x) + Jigsaw puzzle (1.28x)');
+        console.log(`3 layers added: Green glow (1.22x) + Matrix letters (1.25x) + ${this.jigsawPieces.length} Jigsaw pieces (1.28x)`);
     }
 
     REMOVE_createPuzzlePiecesForMesh(originalMesh, geometry, meshIndex) {
@@ -525,6 +569,62 @@ export class BrainViewer {
     setupEventListeners() {
         // Window resize
         window.addEventListener('resize', () => this.onWindowResize(), false);
+        
+        // Click handler for puzzle pieces
+        this.renderer.domElement.addEventListener('click', (event) => this.handleClick(event), false);
+        this.renderer.domElement.addEventListener('touchend', (event) => this.handleClick(event), false);
+    }
+    
+    handleClick(event) {
+        if (this.puzzleExploded) return;
+        
+        // Calculate mouse position
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        const x = event.clientX || (event.changedTouches && event.changedTouches[0].clientX);
+        const y = event.clientY || (event.changedTouches && event.changedTouches[0].clientY);
+        
+        this.mouse.x = ((x - rect.left) / rect.width) * 2 - 1;
+        this.mouse.y = -((y - rect.top) / rect.height) * 2 + 1;
+        
+        // Raycast to find clicked puzzle pieces
+        this.raycaster.setFromCamera(this.mouse, this.camera);
+        const intersects = this.raycaster.intersectObjects(this.jigsawPieces, true);
+        
+        if (intersects.length > 0) {
+            console.log('Puzzle piece clicked! Exploding all pieces...');
+            this.explodeAllPieces();
+        }
+    }
+    
+    explodeAllPieces() {
+        if (this.puzzleExploded) return;
+        this.puzzleExploded = true;
+        
+        // Animate each piece flying off screen in random directions
+        this.jigsawPieces.forEach((piece, index) => {
+            // Random direction
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 15 + Math.random() * 10;
+            const targetX = Math.cos(angle) * speed;
+            const targetY = Math.sin(angle) * speed;
+            const targetZ = (Math.random() - 0.5) * speed;
+            
+            // Random rotation
+            const rotX = (Math.random() - 0.5) * 10;
+            const rotY = (Math.random() - 0.5) * 10;
+            const rotZ = (Math.random() - 0.5) * 10;
+            
+            // Store animation data
+            piece.userData.animation = {
+                startTime: Date.now() + index * 50, // Stagger the start
+                duration: 1500,
+                startPos: piece.position.clone(),
+                startRot: piece.rotation.clone(),
+                targetPos: new THREE.Vector3(targetX, targetY, targetZ),
+                targetRot: new THREE.Euler(rotX, rotY, rotZ),
+                startScale: piece.scale.clone()
+            };
+        });
     }
 
     onWindowResize() {
@@ -550,6 +650,42 @@ export class BrainViewer {
         
         // Update Matrix canvas texture
         this.updateMatrixCanvas();
+        
+        // Update puzzle piece animations
+        if (this.puzzleExploded) {
+            const now = Date.now();
+            this.jigsawPieces.forEach((piece) => {
+                if (piece.userData.animation) {
+                    const anim = piece.userData.animation;
+                    const elapsed = now - anim.startTime;
+                    
+                    if (elapsed < 0) return; // Not started yet
+                    
+                    const progress = Math.min(elapsed / anim.duration, 1);
+                    const easeOut = 1 - Math.pow(1 - progress, 3); // Cubic ease-out
+                    
+                    // Update position
+                    piece.position.lerpVectors(anim.startPos, anim.targetPos, easeOut);
+                    
+                    // Update rotation
+                    piece.rotation.x = anim.startRot.x + anim.targetRot.x * easeOut;
+                    piece.rotation.y = anim.startRot.y + anim.targetRot.y * easeOut;
+                    piece.rotation.z = anim.startRot.z + anim.targetRot.z * easeOut;
+                    
+                    // Fade out and shrink
+                    const fadeProgress = Math.max(0, (progress - 0.5) * 2);
+                    if (piece.material.uniforms) {
+                        piece.material.opacity = 1 - fadeProgress;
+                    }
+                    piece.scale.copy(anim.startScale).multiplyScalar(1 - fadeProgress * 0.5);
+                    
+                    // Hide completely when done
+                    if (progress >= 1) {
+                        piece.visible = false;
+                    }
+                }
+            });
+        }
         
         // Update controls
         this.controls.update();

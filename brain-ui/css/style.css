@@ -157,6 +157,11 @@ body {
     transition: all 0.3s ease;
 }
 
+/* Cursor pointer for canvas when interactive */
+#container canvas {
+    cursor: pointer;
+}
+
 /* Pulse animation for hints */
 @keyframes pulse {
     0%, 100% {
