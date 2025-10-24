@@ -7,7 +7,8 @@ An interactive 3D brain puzzle with multiple versions showcasing different appro
 ## 🎯 Quick Links
 
 - **[Version Selector](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/)** - Choose from 7 different versions
-- **[V9 - Latest](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v9/)** - Matrix spiral threads (⭐ Recommended)
+- **[V10 - Latest](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v10/)** - Drip & melt effects (⭐ Recommended)
+- **[V9 - Spiral](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v9/)** - Matrix spiral threads
 - **[V8 - Instant](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v8/)** - 25 pieces, instant explosion
 - **[V7 - Puzzle Shapes](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v7/)** - Special clicked piece
 - **[V6 - Full Coverage](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v6/)** - Dual-colored hemispheres
@@ -20,10 +21,21 @@ An interactive 3D brain puzzle with multiple versions showcasing different appro
 
 ## 🌟 Version Highlights
 
-### V9 - Matrix Spiral Explosion (Latest) ⭐
+### V10 - Drip & Melt with Numbered Pieces (Latest) ⭐
+**Location:** `/brain-ui-v10/`
+
+Liquid physics with debugging numbers:
+- 🔢 **Numbered pieces** - White bars show piece numbers (debug visibility)
+- 💧 **Individual Matrix drips** - Each code line drips from random points
+- 🌊 **Green melt** - Top-down melting effect with gravity
+- ⏱️ **Perfect timing** - Pieces → Drips (4.5s) → Melt (6.5s)
+- 🎭 **Liquid cascade** - Realistic drip physics with acceleration
+- 🔤 **MIFF branding** - Throughout experience
+
+### V9 - Matrix Spiral Explosion
 **Location:** `/brain-ui-v9/`
 
-Epic two-stage explosion effect:
+Two-stage spiral effect:
 - 💥 **TRUE instant explosion** - All pieces move from frame 1 (removed delay check)
 - 🌀 **Matrix spiral** - Code threads spiral away after pieces
 - ✨ **Golden angle** - 137.5° distribution for beautiful patterns
