@@ -319,63 +319,16 @@ export class BrainViewer {
                 if (child.parent) child.parent.add(matrixMesh);
                 else this.scene.add(matrixMesh);
                 
-                // LAYER 3: Jigsaw puzzle pattern overlay (1.28x)
-                const jigsawMaterial = new THREE.ShaderMaterial({
-                    uniforms: {
-                        time: { value: 0 }
-                    },
-                    vertexShader: `
-                        varying vec2 vUv;
-                        varying vec3 vWorldPosition;
-                        
-                        void main() {
-                            vUv = uv;
-                            vec4 worldPos = modelMatrix * vec4(position, 1.0);
-                            vWorldPosition = worldPos.xyz;
-                            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                        }
-                    `,
-                    fragmentShader: `
-                        varying vec3 vWorldPosition;
-                        
-                        void main() {
-                            // Create 3x3 puzzle grid
-                            vec2 gridUV = fract(vWorldPosition.xy * 1.5);
-                            float edgeThickness = 0.05;
-                            
-                            // Puzzle piece edges (black lines)
-                            float edge = step(gridUV.x, edgeThickness) + step(gridUV.x, 1.0 - edgeThickness) +
-                                        step(gridUV.y, edgeThickness) + step(gridUV.y, 1.0 - edgeThickness);
-                            edge = clamp(edge, 0.0, 1.0);
-                            
-                            // White pieces with black edges
-                            vec3 color = mix(vec3(1.0), vec3(0.0), edge);
-                            float alpha = 0.3 + edge * 0.5;
-                            
-                            gl_FragColor = vec4(color, alpha);
-                        }
-                    `,
-                    transparent: true,
-                    side: THREE.DoubleSide,
-                    depthWrite: false,
-                    depthTest: true
-                });
-                
-                const jigsawMesh = new THREE.Mesh(overlayGeometry.clone(), jigsawMaterial);
-                jigsawMesh.position.copy(child.position);
-                jigsawMesh.rotation.copy(child.rotation);
-                jigsawMesh.scale.copy(child.scale).multiplyScalar(1.28);
-                this.matrixOverlay.push(jigsawMesh);
-                
-                if (child.parent) child.parent.add(jigsawMesh);
-                else this.scene.add(jigsawMesh);
+                // LAYER 3: Puzzle pieces overlay (1.28x) - divide into 9 regions
+                this.createPuzzlePiecesForMesh(child, overlayGeometry, meshIndex);
+                meshIndex++;
             }
         });
         
-        console.log('3 layers added: Green glow + Matrix letters + Jigsaw pattern');
+        console.log('3 layers added: Green glow + Matrix letters + Puzzle pieces');
     }
 
-    REMOVE_createPuzzlePiecesForMesh(originalMesh, geometry, meshIndex) {
+    createPuzzlePiecesForMesh(originalMesh, geometry, meshIndex) {
         // Define 9 puzzle regions with colors
         const puzzleRegions = [
             { color: 0xff6b6b, name: 'Region 1' },
@@ -429,7 +382,7 @@ export class BrainViewer {
     }
 
 
-    REMOVE_onPieceClick(piece) {
+    onPieceClick(piece) {
         if (piece.userData.isSolved) return;
         
         // Mark as solved
@@ -476,7 +429,7 @@ export class BrainViewer {
         }
     }
 
-    REMOVE_onPuzzleComplete() {
+    onPuzzleComplete() {
         console.log('🎉 Puzzle Complete!');
         
         // Show completion message
@@ -507,7 +460,7 @@ export class BrainViewer {
         }, 3000);
     }
 
-    REMOVE_handleClick(event) {
+    handleClick(event) {
         // Calculate mouse position
         const rect = this.renderer.domElement.getBoundingClientRect();
         this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
