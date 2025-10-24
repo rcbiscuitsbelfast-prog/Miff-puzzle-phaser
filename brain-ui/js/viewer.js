@@ -3,6 +3,8 @@
  * Handles scene setup, camera, lights, and orbit controls
  */
 
+import { PuzzleShapeGenerator } from './puzzle-shapes.js';
+
 export class BrainViewer {
     constructor(containerId) {
         this.container = document.getElementById(containerId);
@@ -23,9 +25,15 @@ export class BrainViewer {
         this.mouse = new THREE.Vector2();
         this.puzzleExploded = false;
         
+        // Puzzle configuration: 5x5 grid = 25 pieces
+        this.puzzleRows = 5;
+        this.puzzleCols = 5;
+        this.puzzleGenerator = null;
+        
         this.init();
         this.setupEventListeners();
         this.initMatrixCanvas();
+        this.initPuzzleGenerator();
     }
 
     init() {
@@ -163,6 +171,102 @@ export class BrainViewer {
         }
     }
 
+
+    initPuzzleGenerator() {
+        // Initialize the puzzle shape generator
+        this.puzzleGenerator = new PuzzleShapeGenerator(this.puzzleRows, this.puzzleCols);
+        console.log(`Puzzle generator initialized: ${this.puzzleRows}x${this.puzzleCols} = ${this.puzzleRows * this.puzzleCols} pieces`);
+    }
+
+    generatePuzzleColors(count) {
+        // Generate an array of vibrant, varied colors for puzzle pieces
+        const colors = [];
+        const hueStep = 360 / count;
+        
+        for (let i = 0; i < count; i++) {
+            const hue = (i * hueStep + Math.random() * 20) % 360;
+            const saturation = 60 + Math.random() * 30; // 60-90%
+            const lightness = 50 + Math.random() * 20;  // 50-70%
+            
+            // Convert HSL to RGB
+            const color = this.hslToRgb(hue / 360, saturation / 100, lightness / 100);
+            colors.push((color.r << 16) | (color.g << 8) | color.b);
+        }
+        
+        return colors;
+    }
+
+    hslToRgb(h, s, l) {
+        let r, g, b;
+        
+        if (s === 0) {
+            r = g = b = l;
+        } else {
+            const hue2rgb = (p, q, t) => {
+                if (t < 0) t += 1;
+                if (t > 1) t -= 1;
+                if (t < 1/6) return p + (q - p) * 6 * t;
+                if (t < 1/2) return q;
+                if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                return p;
+            };
+            
+            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            const p = 2 * l - q;
+            r = hue2rgb(p, q, h + 1/3);
+            g = hue2rgb(p, q, h);
+            b = hue2rgb(p, q, h - 1/3);
+        }
+        
+        return {
+            r: Math.round(r * 255),
+            g: Math.round(g * 255),
+            b: Math.round(b * 255)
+        };
+    }
+
+    createPuzzlePieceTexture(pieceIndex, color) {
+        // Create a canvas for this puzzle piece
+        const size = 512; // Texture resolution
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        
+        // Get the puzzle piece shape path
+        const path = this.puzzleGenerator.generatePiecePath(pieceIndex, size, size);
+        const path2d = new Path2D(path);
+        
+        // Fill with color
+        ctx.fillStyle = `#${color.toString(16).padStart(6, '0')}`;
+        ctx.fill(path2d);
+        
+        // Add subtle gradient for depth
+        const pieceData = this.puzzleGenerator.getPieceData(pieceIndex);
+        const centerX = size / 2;
+        const centerY = size / 2;
+        const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, size * 0.7);
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0.2)');
+        
+        ctx.save();
+        ctx.clip(path2d);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, size, size);
+        ctx.restore();
+        
+        // Add edge shadow for depth
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.lineWidth = 3;
+        ctx.stroke(path2d);
+        
+        // Add inner highlight
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke(path2d);
+        
+        return canvas;
+    }
 
     initMatrixCanvas() {
         // Create canvas for Matrix rain texture
@@ -320,81 +424,31 @@ export class BrainViewer {
                 if (child.parent) child.parent.add(matrixMesh);
                 else this.scene.add(matrixMesh);
                 
-                // LAYER 3: Create 9 separate jigsaw pieces with picture texture
-                // We'll create 9 pieces in a 3x3 grid
-                const colors = [
-                    0xff6b6b, 0x4ecdc4, 0x95e1d3,
-                    0xf38181, 0xaa96da, 0xfcbad3,
-                    0xffffd2, 0xa8dadc, 0xe63946
-                ];
+                // LAYER 3: Create jigsaw puzzle pieces with proper puzzle shapes
+                // 5x5 grid = 25 pieces with realistic tabs and blanks
+                const totalPieces = this.puzzleRows * this.puzzleCols;
                 
-                for (let i = 0; i < 9; i++) {
-                    const col = i % 3;
-                    const row = Math.floor(i / 3);
+                // Generate vibrant colors for puzzle pieces
+                const colors = this.generatePuzzleColors(totalPieces);
+                
+                for (let i = 0; i < totalPieces; i++) {
+                    const row = Math.floor(i / this.puzzleCols);
+                    const col = i % this.puzzleCols;
                     
-                    // Create jigsaw piece material with unique color for each piece
-                    const pieceMaterial = new THREE.ShaderMaterial({
-                        uniforms: {
-                            time: { value: 0 },
-                            pieceColor: { value: new THREE.Color(colors[i]) },
-                            col: { value: col },
-                            row: { value: row }
-                        },
-                        vertexShader: `
-                            varying vec2 vUv;
-                            varying vec3 vWorldPosition;
-                            
-                            void main() {
-                                vUv = uv;
-                                vec4 worldPos = modelMatrix * vec4(position, 1.0);
-                                vWorldPosition = worldPos.xyz;
-                                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                            }
-                        `,
-                        fragmentShader: `
-                            uniform vec3 pieceColor;
-                            uniform float col;
-                            uniform float row;
-                            varying vec3 vWorldPosition;
-                            
-                            void main() {
-                                // Create 3x3 puzzle grid
-                                vec2 gridUV = fract(vWorldPosition.xy * 1.5);
-                                
-                                // Determine which piece this fragment belongs to
-                                vec2 pieceIndex = floor(vWorldPosition.xy * 1.5);
-                                float currentCol = mod(pieceIndex.x + 10.0, 3.0);
-                                float currentRow = mod(pieceIndex.y + 10.0, 3.0);
-                                
-                                // Only show this piece's region
-                                if (abs(currentCol - col) > 0.1 || abs(currentRow - row) > 0.1) {
-                                    discard;
-                                }
-                                
-                                // Jigsaw edge pattern
-                                float edgeThickness = 0.08;
-                                float edge = step(gridUV.x, edgeThickness) + step(1.0 - edgeThickness, gridUV.x) +
-                                            step(gridUV.y, edgeThickness) + step(1.0 - edgeThickness, gridUV.y);
-                                edge = clamp(edge, 0.0, 1.0);
-                                
-                                // Add tab/blank pattern for jigsaw look
-                                float tabX = step(0.4, gridUV.x) * step(gridUV.x, 0.6);
-                                float tabY = step(0.4, gridUV.y) * step(gridUV.y, 0.6);
-                                float tab = (tabX * step(gridUV.y, 0.1)) + (tabY * step(gridUV.x, 0.1));
-                                
-                                // Piece color with darker edges and subtle texture
-                                vec3 color = pieceColor * (0.8 + gridUV.x * 0.2);
-                                color = mix(color, vec3(0.2), edge * 0.7);
-                                
-                                float alpha = 0.95 - tab * 0.5;
-                                
-                                gl_FragColor = vec4(color, alpha);
-                            }
-                        `,
+                    // Create canvas texture for this puzzle piece with proper jigsaw shape
+                    const pieceCanvas = this.createPuzzlePieceTexture(i, colors[i]);
+                    const pieceTexture = new THREE.CanvasTexture(pieceCanvas);
+                    pieceTexture.needsUpdate = true;
+                    
+                    // Create material with the puzzle piece texture
+                    const pieceMaterial = new THREE.MeshBasicMaterial({
+                        map: pieceTexture,
                         transparent: true,
+                        opacity: 0.95,
                         side: THREE.DoubleSide,
                         depthWrite: false,
-                        depthTest: true
+                        depthTest: true,
+                        alphaTest: 0.1 // Discard nearly transparent pixels
                     });
                     
                     const pieceMesh = new THREE.Mesh(overlayGeometry.clone(), pieceMaterial);
@@ -404,6 +458,8 @@ export class BrainViewer {
                     
                     pieceMesh.userData.isPuzzlePiece = true;
                     pieceMesh.userData.pieceIndex = i;
+                    pieceMesh.userData.row = row;
+                    pieceMesh.userData.col = col;
                     
                     this.jigsawPieces.push(pieceMesh);
                     
@@ -413,7 +469,10 @@ export class BrainViewer {
             }
         });
         
-        console.log(`3 layers added: Green glow (1.22x) + Matrix letters (1.25x) + ${this.jigsawPieces.length} Jigsaw pieces (1.28x)`);
+        console.log(`✅ 3 overlay layers created:
+  - Green glow shader (1.22x scale)
+  - Matrix rain letters (1.25x scale) 
+  - ${this.jigsawPieces.length} Jigsaw puzzle pieces with proper shapes (1.28x scale)`);
     }
 
     REMOVE_createPuzzlePiecesForMesh(originalMesh, geometry, meshIndex) {
@@ -600,24 +659,26 @@ export class BrainViewer {
         if (this.puzzleExploded) return;
         this.puzzleExploded = true;
         
+        console.log(`💥 Exploding ${this.jigsawPieces.length} puzzle pieces!`);
+        
         // Animate each piece flying off screen in random directions
         this.jigsawPieces.forEach((piece, index) => {
-            // Random direction
+            // Random direction (more varied for more pieces)
             const angle = Math.random() * Math.PI * 2;
-            const speed = 15 + Math.random() * 10;
+            const speed = 12 + Math.random() * 8; // Slightly faster for more chaos
             const targetX = Math.cos(angle) * speed;
             const targetY = Math.sin(angle) * speed;
-            const targetZ = (Math.random() - 0.5) * speed;
+            const targetZ = (Math.random() - 0.5) * speed * 1.2;
             
-            // Random rotation
-            const rotX = (Math.random() - 0.5) * 10;
-            const rotY = (Math.random() - 0.5) * 10;
-            const rotZ = (Math.random() - 0.5) * 10;
+            // Random rotation (more spinning for dramatic effect)
+            const rotX = (Math.random() - 0.5) * 15;
+            const rotY = (Math.random() - 0.5) * 15;
+            const rotZ = (Math.random() - 0.5) * 15;
             
-            // Store animation data
+            // Store animation data with shorter stagger for 25 pieces
             piece.userData.animation = {
-                startTime: Date.now() + index * 50, // Stagger the start
-                duration: 1500,
+                startTime: Date.now() + index * 30, // 30ms stagger (faster than before)
+                duration: 1400, // Slightly shorter duration
                 startPos: piece.position.clone(),
                 startRot: piece.rotation.clone(),
                 targetPos: new THREE.Vector3(targetX, targetY, targetZ),
@@ -625,6 +686,15 @@ export class BrainViewer {
                 startScale: piece.scale.clone()
             };
         });
+        
+        // Hide info panel after explosion starts
+        setTimeout(() => {
+            const infoPanel = document.getElementById('info-panel');
+            if (infoPanel) {
+                infoPanel.style.transition = 'opacity 0.5s ease';
+                infoPanel.style.opacity = '0';
+            }
+        }, 500);
     }
 
     onWindowResize() {
