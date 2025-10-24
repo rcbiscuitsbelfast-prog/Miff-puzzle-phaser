@@ -166,8 +166,7 @@ export class BrainViewer {
                 const overlayMaterial = new THREE.ShaderMaterial({
                     uniforms: {
                         time: { value: 0 },
-                        color: { value: new THREE.Color(0x00ff88) }, // Bright green
-                        glowColor: { value: new THREE.Color(0x00ffaa) }, // Cyan-green glow
+                        baseColor: { value: new THREE.Color(0x00ff44) }, // Vibrant green
                     },
                     vertexShader: `
                         varying vec3 vNormal;
@@ -186,8 +185,7 @@ export class BrainViewer {
                     `,
                     fragmentShader: `
                         uniform float time;
-                        uniform vec3 color;
-                        uniform vec3 glowColor;
+                        uniform vec3 baseColor;
                         varying vec3 vNormal;
                         varying vec3 vPosition;
                         varying vec3 vWorldPosition;
@@ -196,33 +194,32 @@ export class BrainViewer {
                             // Calculate view direction for Fresnel effect
                             vec3 viewDirection = normalize(cameraPosition - vWorldPosition);
                             
-                            // Fresnel effect - glow on edges
-                            float fresnel = pow(1.0 - max(dot(viewDirection, vNormal), 0.0), 3.0);
+                            // Fresnel effect - glow on edges (softer)
+                            float fresnel = pow(1.0 - abs(dot(viewDirection, vNormal)), 2.5);
                             
                             // Flowing effect using position and time
-                            float flow = sin(vWorldPosition.y * 3.0 + vWorldPosition.x * 2.0 + time * 2.0) * 0.5 + 0.5;
+                            float flow = sin(vWorldPosition.y * 3.0 + vWorldPosition.x * 2.0 + time * 2.0) * 0.3 + 0.7;
                             
-                            // Combine base color with flow and fresnel
-                            vec3 finalColor = mix(color, glowColor, flow * 0.3);
+                            // Keep consistent green - just vary intensity slightly
+                            vec3 finalColor = baseColor * flow;
                             
-                            // Add edge glow
-                            finalColor += glowColor * fresnel * 0.8;
+                            // Add bright edge glow (consistent green)
+                            finalColor += baseColor * fresnel * 1.5;
                             
-                            // Add flowing intensity to edges
-                            float edgeFlow = fresnel * flow;
-                            finalColor += vec3(0.0, 1.0, 0.5) * edgeFlow * 0.5;
+                            // Ensure color stays in green spectrum
+                            finalColor = max(finalColor, baseColor * 0.6); // Minimum brightness
                             
-                            // Semi-transparent overlay
-                            float alpha = 0.7 + fresnel * 0.3;
+                            // Full opacity to cover brain completely
+                            float alpha = 0.95;
                             
                             gl_FragColor = vec4(finalColor, alpha);
                         }
                     `,
                     transparent: true,
-                    side: THREE.FrontSide,
-                    depthWrite: false, // Don't write to depth buffer for overlay
-                    depthTest: true,   // But still test against depth
-                    blending: THREE.AdditiveBlending // Additive for glow effect
+                    side: THREE.DoubleSide, // Render both sides to cover everything
+                    depthWrite: false,
+                    depthTest: true,
+                    blending: THREE.NormalBlending // Normal blending for consistent color
                 });
                 
                 // Create overlay mesh
@@ -231,7 +228,7 @@ export class BrainViewer {
                 // Copy transform from original mesh
                 overlayMesh.position.copy(child.position);
                 overlayMesh.rotation.copy(child.rotation);
-                overlayMesh.scale.copy(child.scale).multiplyScalar(1.01); // Slightly larger to cover
+                overlayMesh.scale.copy(child.scale).multiplyScalar(1.05); // Larger to fully cover and stand out
                 
                 // Store reference for animation
                 if (!this.greenOverlay) {
