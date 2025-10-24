@@ -11,7 +11,8 @@ export class BrainViewer {
         this.renderer = null;
         this.controls = null;
         this.brainModel = null;
-        this.greenOverlay = null;
+        this.greenOverlay = [];
+        this.matrixOverlay = [];
         this.clock = new THREE.Clock();
         this.overlayTime = 0;
         this.matrixCanvas = null;
@@ -235,47 +236,99 @@ export class BrainViewer {
     }
 
     addGreenOverlay(brainModel) {
-        // Clone the brain geometry to create overlay
+        // Clone the brain geometry to create TWO overlays
         brainModel.traverse((child) => {
             if (child.isMesh && child.geometry) {
-                // Clone geometry
                 const overlayGeometry = child.geometry.clone();
                 
-                // Create material with Matrix canvas texture
-                const overlayMaterial = new THREE.MeshBasicMaterial({
+                // LAYER 1: Green glowy shader base
+                const glowMaterial = new THREE.ShaderMaterial({
+                    uniforms: {
+                        time: { value: 0 },
+                        baseColor: { value: new THREE.Color(0x00ff44) },
+                        glowColor: { value: new THREE.Color(0x00ffaa) }
+                    },
+                    vertexShader: `
+                        varying vec3 vNormal;
+                        varying vec3 vWorldPosition;
+                        
+                        void main() {
+                            vNormal = normalize(normalMatrix * normal);
+                            vec4 worldPos = modelMatrix * vec4(position, 1.0);
+                            vWorldPosition = worldPos.xyz;
+                            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                        }
+                    `,
+                    fragmentShader: `
+                        uniform float time;
+                        uniform vec3 baseColor;
+                        uniform vec3 glowColor;
+                        varying vec3 vNormal;
+                        varying vec3 vWorldPosition;
+                        
+                        void main() {
+                            vec3 viewDirection = normalize(cameraPosition - vWorldPosition);
+                            
+                            // Fresnel edge glow
+                            float fresnel = pow(1.0 - abs(dot(viewDirection, vNormal)), 2.5);
+                            
+                            // Flowing effect
+                            float flow = sin(vWorldPosition.y * 3.0 + vWorldPosition.x * 2.0 + time * 2.0) * 0.3 + 0.7;
+                            
+                            vec3 finalColor = baseColor * flow;
+                            finalColor += glowColor * fresnel * 1.5;
+                            finalColor = max(finalColor, baseColor * 0.6);
+                            
+                            gl_FragColor = vec4(finalColor, 0.85);
+                        }
+                    `,
+                    transparent: true,
+                    side: THREE.DoubleSide,
+                    depthWrite: false,
+                    depthTest: true,
+                    blending: THREE.NormalBlending
+                });
+                
+                const glowMesh = new THREE.Mesh(overlayGeometry.clone(), glowMaterial);
+                glowMesh.position.copy(child.position);
+                glowMesh.rotation.copy(child.rotation);
+                glowMesh.scale.copy(child.scale).multiplyScalar(1.12); // Slightly smaller than matrix layer
+                
+                this.greenOverlay.push(glowMesh);
+                
+                if (child.parent) {
+                    child.parent.add(glowMesh);
+                } else {
+                    this.scene.add(glowMesh);
+                }
+                
+                // LAYER 2: Matrix letters on top
+                const matrixMaterial = new THREE.MeshBasicMaterial({
                     map: this.matrixTexture,
                     transparent: true,
-                    opacity: 0.98,
+                    opacity: 0.9,
                     side: THREE.DoubleSide,
                     blending: THREE.AdditiveBlending,
                     depthWrite: false,
                     depthTest: true
                 });
                 
-                // Create overlay mesh
-                const overlayMesh = new THREE.Mesh(overlayGeometry, overlayMaterial);
+                const matrixMesh = new THREE.Mesh(overlayGeometry.clone(), matrixMaterial);
+                matrixMesh.position.copy(child.position);
+                matrixMesh.rotation.copy(child.rotation);
+                matrixMesh.scale.copy(child.scale).multiplyScalar(1.15); // Larger to cover everything
                 
-                // Copy transform from original mesh
-                overlayMesh.position.copy(child.position);
-                overlayMesh.rotation.copy(child.rotation);
-                overlayMesh.scale.copy(child.scale).multiplyScalar(1.15); // Much larger to fully cover all red
+                this.matrixOverlay.push(matrixMesh);
                 
-                // Store reference for animation
-                if (!this.greenOverlay) {
-                    this.greenOverlay = [];
-                }
-                this.greenOverlay.push(overlayMesh);
-                
-                // Add to parent (or scene if no parent)
                 if (child.parent) {
-                    child.parent.add(overlayMesh);
+                    child.parent.add(matrixMesh);
                 } else {
-                    this.scene.add(overlayMesh);
+                    this.scene.add(matrixMesh);
                 }
             }
         });
         
-        console.log('Green overlay added with flowing edge effects');
+        console.log('Green glow layer + Matrix letters overlay added');
     }
 
     setupEventListeners() {
@@ -291,6 +344,18 @@ export class BrainViewer {
 
     animate() {
         requestAnimationFrame(() => this.animate());
+        
+        // Update time
+        this.overlayTime = this.clock.getElapsedTime();
+        
+        // Update green glow shader uniforms
+        if (this.greenOverlay) {
+            this.greenOverlay.forEach((mesh) => {
+                if (mesh.material && mesh.material.uniforms) {
+                    mesh.material.uniforms.time.value = this.overlayTime;
+                }
+            });
+        }
         
         // Update Matrix canvas texture
         this.updateMatrixCanvas();
