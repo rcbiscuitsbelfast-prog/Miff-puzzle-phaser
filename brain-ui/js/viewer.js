@@ -13,16 +13,11 @@ export class BrainViewer {
         this.brainModel = null;
         this.greenOverlay = [];
         this.matrixOverlay = [];
-        this.puzzleOverlay = [];
         this.clock = new THREE.Clock();
         this.overlayTime = 0;
         this.matrixCanvas = null;
         this.matrixTexture = null;
         this.matrixCtx = null;
-        this.raycaster = new THREE.Raycaster();
-        this.mouse = new THREE.Vector2();
-        this.piecesSolved = 0;
-        this.totalPieces = 9;
         
         this.init();
         this.setupEventListeners();
@@ -486,16 +481,6 @@ export class BrainViewer {
     setupEventListeners() {
         // Window resize
         window.addEventListener('resize', () => this.onWindowResize(), false);
-        
-        // Click/touch for puzzle pieces
-        this.renderer.domElement.addEventListener('click', (e) => this.handleClick(e), false);
-        this.renderer.domElement.addEventListener('touchend', (e) => {
-            if (e.changedTouches && e.changedTouches[0]) {
-                const touch = e.changedTouches[0];
-                const clickEvent = { clientX: touch.clientX, clientY: touch.clientY };
-                this.handleClick(clickEvent);
-            }
-        }, false);
     }
 
     onWindowResize() {
@@ -521,16 +506,6 @@ export class BrainViewer {
         
         // Update Matrix canvas texture
         this.updateMatrixCanvas();
-        
-        // Animate visible puzzle pieces (pulsing glow)
-        this.puzzleOverlay.forEach((piece) => {
-            if (!piece.userData.isSolved && piece.visible) {
-                piece.userData.pulsePhase += 0.03;
-                const pulse = Math.sin(piece.userData.pulsePhase) * 0.15 + 1;
-                const baseopacity = 0.7;
-                piece.material.opacity = baseopacity + Math.sin(piece.userData.pulsePhase) * 0.2;
-            }
-        });
         
         // Update controls
         this.controls.update();
