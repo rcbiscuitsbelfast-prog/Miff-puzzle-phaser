@@ -7,7 +7,8 @@ An interactive 3D brain puzzle with multiple versions showcasing different appro
 ## 🎯 Quick Links
 
 - **[Version Selector](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/)** - Choose from 7 different versions
-- **[V10 - Latest](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v10/)** - Drip & melt effects (⭐ Recommended)
+- **[V11 - Latest](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v11/)** - Electrified brain (⭐ Recommended)
+- **[V10 - Numbered](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v10/)** - Drip & melt effects
 - **[V9 - Spiral](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v9/)** - Matrix spiral threads
 - **[V8 - Instant](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v8/)** - 25 pieces, instant explosion
 - **[V7 - Puzzle Shapes](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v7/)** - Special clicked piece
@@ -21,10 +22,21 @@ An interactive 3D brain puzzle with multiple versions showcasing different appro
 
 ## 🌟 Version Highlights
 
-### V10 - Drip & Melt with Numbered Pieces (Latest) ⭐
+### V11 - Electrified Brain with Drip & Melt (Latest) ⚡
+**Location:** `/brain-ui-v11/`
+
+Stunning electrified brain reveal:
+- ⚡ **Pulsating brain shader** - Dark green with electric glow
+- 💙 **Blue electrified veins** - Pulse faster (8Hz) with bright blue
+- 💚 **Dark green tissue** - Slower pulse (2Hz) with green glow
+- 💧 **Center code drips** - 12 lines drip from brain center
+- 🌊 **Top-down green melt** - ACTUALLY melts away now!
+- 🎭 **Multi-stage reveal** - Pieces → Matrix fade → Drips → Melt → Brain
+
+### V10 - Drip & Melt with Numbered Pieces
 **Location:** `/brain-ui-v10/`
 
-Liquid physics with debugging numbers:
+Liquid physics with debugging:
 - 🔢 **Numbered pieces** - White bars show piece numbers (debug visibility)
 - 💧 **Individual Matrix drips** - Each code line drips from random points
 - 🌊 **Green melt** - Top-down melting effect with gravity
