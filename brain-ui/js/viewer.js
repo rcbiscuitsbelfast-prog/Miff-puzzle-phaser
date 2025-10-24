@@ -30,21 +30,24 @@ export class BrainViewer {
         // Renderer
         this.renderer = new THREE.WebGLRenderer({ 
             antialias: true,
-            alpha: false
+            alpha: false,
+            powerPreference: 'high-performance'
         });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        
+        // Ensure proper depth buffer
+        this.renderer.sortObjects = true;
+        
         this.container.appendChild(this.renderer.domElement);
 
-        // Orbit Controls
+        // Orbit Controls - simplified to prevent jittering
         this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
-        this.controls.enableDamping = true;
-        this.controls.dampingFactor = 0.08;
+        this.controls.enableDamping = false;  // Disabled - can cause jitter
         this.controls.minDistance = 1.5;
         this.controls.maxDistance = 8;
         this.controls.enablePan = true;
-        this.controls.autoRotate = true;
-        this.controls.autoRotateSpeed = 1.0;
+        this.controls.autoRotate = false;     // Disabled - can conflict with interaction
         
         // Mobile-friendly touch controls
         this.controls.touches = {
@@ -105,16 +108,30 @@ export class BrainViewer {
             this.brainModel.scale.setScalar(scale);
             this.brainModel.position.sub(center.multiplyScalar(scale));
             
-            // Apply standard materials (no custom shaders)
+            // Fix material properties to prevent flashing/jittering
             this.brainModel.traverse((child) => {
                 if (child.isMesh) {
-                    // Ensure materials are properly set up
                     if (child.material) {
+                        // Force opaque rendering (transparency causes z-fighting)
+                        child.material.transparent = false;
+                        child.material.opacity = 1.0;
+                        
+                        // Force front-side rendering only
                         child.material.side = THREE.FrontSide;
+                        
+                        // Ensure proper depth rendering
+                        child.material.depthWrite = true;
+                        child.material.depthTest = true;
+                        
+                        // Update material
                         child.material.needsUpdate = true;
-                        // Disable frustum culling to prevent disappearing
-                        child.frustumCulled = false;
                     }
+                    
+                    // Disable frustum culling to prevent disappearing
+                    child.frustumCulled = false;
+                    
+                    // Ensure mesh updates properly
+                    child.matrixAutoUpdate = true;
                 }
             });
             
