@@ -7,7 +7,8 @@ An interactive 3D brain puzzle with multiple versions showcasing different appro
 ## 🎯 Quick Links
 
 - **[Version Selector](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/)** - Choose from 7 different versions
-- **[V6 - Latest](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v6/)** - Full coverage dual-colored (⭐ Recommended)
+- **[V7 - Latest](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v7/)** - Puzzle shapes with special click (⭐ Recommended)
+- **[V6 - Full Coverage](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v6/)** - Dual-colored hemispheres
 - **[V5 - MIFF Edition](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v5/)** - 64 pieces with MIFF branding
 - **[V4 - Enhanced](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v4/)** - 36 pieces auto-rotating
 - **[V3 - Fixed](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v3/)** - 25 pieces shader-based
@@ -17,10 +18,21 @@ An interactive 3D brain puzzle with multiple versions showcasing different appro
 
 ## 🌟 Version Highlights
 
-### V6 - Full Coverage Dual-Color (Latest) ⭐
+### V7 - Puzzle Shapes with Special Click (Latest) ⭐
+**Location:** `/brain-ui-v7/`
+
+The ultimate puzzle experience with ACTUAL jigsaw piece shapes:
+- 🧩 **Real puzzle shapes** - Tabs and blanks, not squares!
+- 🎨 **Front/back coloring** - Warm front, cool back (not mirrored)
+- ⭐ **Special clicked piece** - Floats toward you, enlarges to half-screen
+- ⏱️ **Slower explosion** - 3.5s duration, 80ms stagger
+- 🔤 **MIFF Matrix branding** - Embedded in rain effect
+- 📐 **64 pieces (8×8 grid)** - Perfect piece size
+
+### V6 - Full Coverage Dual-Color
 **Location:** `/brain-ui-v6/`
 
-The most advanced version with complete puzzle coverage:
+Complete puzzle coverage with hemisphere coloring:
 - 🧩 **64 pieces (8×8 grid)** - No gaps in coverage
 - 🎨 **Dual-colored hemispheres** - Warm colors (left), Cool colors (right)
 - 🔤 **MIFF branding** - "Make It For Free" letters in Matrix rain
