@@ -25,15 +25,19 @@ export class BrainViewer {
         this.mouse = new THREE.Vector2();
         this.puzzleExploded = false;
         
-        // Puzzle configuration: 6x6 grid = 36 pieces (more pieces = smaller individual pieces)
-        this.puzzleRows = 6;
-        this.puzzleCols = 6;
+        // Puzzle configuration: 8x8 grid = 64 pieces (more pieces = smaller individual pieces)
+        this.puzzleRows = 8;
+        this.puzzleCols = 8;
         this.puzzleGenerator = null;
         
         this.init();
         this.setupEventListeners();
         this.initMatrixCanvas();
         this.initPuzzleGenerator();
+        
+        // Initialize dual color palettes AFTER rows/cols are set
+        this.leftBrainColors = this.generateColorPalette('warm'); // Reds, oranges, yellows
+        this.rightBrainColors = this.generateColorPalette('cool'); // Blues, purples, greens
     }
 
     init() {
