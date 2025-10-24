@@ -14,9 +14,13 @@ export class BrainViewer {
         this.greenOverlay = null;
         this.clock = new THREE.Clock();
         this.overlayTime = 0;
+        this.matrixCanvas = null;
+        this.matrixTexture = null;
+        this.matrixCtx = null;
         
         this.init();
         this.setupEventListeners();
+        this.initMatrixCanvas();
     }
 
     init() {
@@ -155,6 +159,81 @@ export class BrainViewer {
     }
 
 
+    initMatrixCanvas() {
+        // Create canvas for Matrix rain texture
+        this.matrixCanvas = document.createElement('canvas');
+        this.matrixCanvas.width = 1024;
+        this.matrixCanvas.height = 1024;
+        this.matrixCtx = this.matrixCanvas.getContext('2d');
+        
+        // Matrix letters
+        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()';
+        this.matrixLetters = letters.split('');
+        
+        // Small font size for lots of letters
+        const fontSize = 12;
+        const columns = this.matrixCanvas.width / fontSize;
+        
+        // Initialize drops
+        this.matrixDrops = [];
+        for (let i = 0; i < columns; i++) {
+            this.matrixDrops[i] = Math.random() * -100;
+        }
+        
+        this.matrixFontSize = fontSize;
+        this.matrixColumns = columns;
+        
+        // Create texture
+        this.matrixTexture = new THREE.CanvasTexture(this.matrixCanvas);
+        this.matrixTexture.wrapS = THREE.RepeatWrapping;
+        this.matrixTexture.wrapT = THREE.RepeatWrapping;
+    }
+
+    updateMatrixCanvas() {
+        const ctx = this.matrixCtx;
+        
+        // Fade effect
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        ctx.fillRect(0, 0, this.matrixCanvas.width, this.matrixCanvas.height);
+        
+        // Draw Matrix letters
+        ctx.font = this.matrixFontSize + 'px monospace';
+        
+        for (let i = 0; i < this.matrixDrops.length; i++) {
+            // Random letter
+            const text = this.matrixLetters[Math.floor(Math.random() * this.matrixLetters.length)];
+            
+            // Bright green for leading characters
+            const y = this.matrixDrops[i] * this.matrixFontSize;
+            ctx.fillStyle = '#0F0';
+            ctx.fillText(text, i * this.matrixFontSize, y);
+            
+            // Add trail with fading green
+            for (let j = 1; j < 5; j++) {
+                const trailY = y - j * this.matrixFontSize;
+                if (trailY > 0) {
+                    const trailText = this.matrixLetters[Math.floor(Math.random() * this.matrixLetters.length)];
+                    const alpha = 1 - (j / 5);
+                    ctx.fillStyle = `rgba(0, 255, 0, ${alpha})`;
+                    ctx.fillText(trailText, i * this.matrixFontSize, trailY);
+                }
+            }
+            
+            // Move drop down
+            this.matrixDrops[i]++;
+            
+            // Reset drop
+            if (this.matrixDrops[i] * this.matrixFontSize > this.matrixCanvas.height && Math.random() > 0.975) {
+                this.matrixDrops[i] = 0;
+            }
+        }
+        
+        // Update texture
+        if (this.matrixTexture) {
+            this.matrixTexture.needsUpdate = true;
+        }
+    }
+
     addGreenOverlay(brainModel) {
         // Clone the brain geometry to create overlay
         brainModel.traverse((child) => {
@@ -162,89 +241,15 @@ export class BrainViewer {
                 // Clone geometry
                 const overlayGeometry = child.geometry.clone();
                 
-                // Create Matrix-style shader material with falling code rain
-                const overlayMaterial = new THREE.ShaderMaterial({
-                    uniforms: {
-                        time: { value: 0 },
-                        matrixColor: { value: new THREE.Color(0x00ff41) }, // Matrix green
-                        glowColor: { value: new THREE.Color(0x00ff88) },
-                    },
-                    vertexShader: `
-                        varying vec3 vNormal;
-                        varying vec3 vPosition;
-                        varying vec3 vWorldPosition;
-                        varying vec2 vUv;
-                        
-                        void main() {
-                            vNormal = normalize(normalMatrix * normal);
-                            vPosition = position;
-                            vUv = uv;
-                            
-                            vec4 worldPos = modelMatrix * vec4(position, 1.0);
-                            vWorldPosition = worldPos.xyz;
-                            
-                            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                        }
-                    `,
-                    fragmentShader: `
-                        uniform float time;
-                        uniform vec3 matrixColor;
-                        uniform vec3 glowColor;
-                        varying vec3 vNormal;
-                        varying vec3 vPosition;
-                        varying vec3 vWorldPosition;
-                        varying vec2 vUv;
-                        
-                        // Pseudo-random function
-                        float random(vec2 st) {
-                            return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
-                        }
-                        
-                        void main() {
-                            // Calculate view direction for Fresnel effect
-                            vec3 viewDirection = normalize(cameraPosition - vWorldPosition);
-                            
-                            // Fresnel effect - glow on edges
-                            float fresnel = pow(1.0 - abs(dot(viewDirection, vNormal)), 2.0);
-                            
-                            // Create matrix rain effect
-                            vec2 grid = floor(vWorldPosition.xy * 20.0); // Grid for "characters"
-                            float columnRandom = random(vec2(grid.x, 0.0));
-                            
-                            // Falling rain
-                            float rainSpeed = 2.0 + columnRandom * 3.0;
-                            float rain = fract(vWorldPosition.y * 10.0 - time * rainSpeed + columnRandom * 100.0);
-                            
-                            // Make rain drops
-                            float rainIntensity = smoothstep(0.9, 1.0, rain) * (1.0 - smoothstep(0.0, 0.1, rain));
-                            
-                            // Add random flickering characters
-                            float charFlicker = step(0.7, random(grid + floor(time * 5.0))) * 0.3;
-                            
-                            // Combine effects
-                            float brightness = rainIntensity + charFlicker + 0.5;
-                            
-                            // Matrix green color with variation
-                            vec3 finalColor = mix(matrixColor, glowColor, rainIntensity * 0.5);
-                            finalColor *= brightness;
-                            
-                            // Add edge glow
-                            finalColor += glowColor * fresnel * 1.2;
-                            
-                            // Ensure minimum brightness to cover brain
-                            finalColor = max(finalColor, matrixColor * 0.6);
-                            
-                            // Full opacity to cover brain completely
-                            float alpha = 0.98;
-                            
-                            gl_FragColor = vec4(finalColor, alpha);
-                        }
-                    `,
+                // Create material with Matrix canvas texture
+                const overlayMaterial = new THREE.MeshBasicMaterial({
+                    map: this.matrixTexture,
                     transparent: true,
-                    side: THREE.DoubleSide, // Render both sides to cover everything
+                    opacity: 0.98,
+                    side: THREE.DoubleSide,
+                    blending: THREE.AdditiveBlending,
                     depthWrite: false,
-                    depthTest: true,
-                    blending: THREE.NormalBlending
+                    depthTest: true
                 });
                 
                 // Create overlay mesh
@@ -253,7 +258,7 @@ export class BrainViewer {
                 // Copy transform from original mesh
                 overlayMesh.position.copy(child.position);
                 overlayMesh.rotation.copy(child.rotation);
-                overlayMesh.scale.copy(child.scale).multiplyScalar(1.08); // Even larger to fully cover all red
+                overlayMesh.scale.copy(child.scale).multiplyScalar(1.15); // Much larger to fully cover all red
                 
                 // Store reference for animation
                 if (!this.greenOverlay) {
@@ -287,17 +292,8 @@ export class BrainViewer {
     animate() {
         requestAnimationFrame(() => this.animate());
         
-        // Update time for overlay animation
-        this.overlayTime = this.clock.getElapsedTime();
-        
-        // Update green overlay shader uniforms
-        if (this.greenOverlay) {
-            this.greenOverlay.forEach((overlayMesh) => {
-                if (overlayMesh.material && overlayMesh.material.uniforms) {
-                    overlayMesh.material.uniforms.time.value = this.overlayTime;
-                }
-            });
-        }
+        // Update Matrix canvas texture
+        this.updateMatrixCanvas();
         
         // Update controls
         this.controls.update();
