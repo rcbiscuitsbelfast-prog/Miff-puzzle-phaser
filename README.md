@@ -7,7 +7,8 @@ An interactive 3D brain puzzle with multiple versions showcasing different appro
 ## 🎯 Quick Links
 
 - **[Version Selector](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/)** - Choose from 7 different versions
-- **[V8 - Latest](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v8/)** - 25 pieces, instant explosion (⭐ Recommended)
+- **[V9 - Latest](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v9/)** - Matrix spiral threads (⭐ Recommended)
+- **[V8 - Instant](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v8/)** - 25 pieces, instant explosion
 - **[V7 - Puzzle Shapes](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v7/)** - Special clicked piece
 - **[V6 - Full Coverage](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v6/)** - Dual-colored hemispheres
 - **[V5 - MIFF Edition](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v5/)** - 64 pieces with MIFF branding
@@ -19,10 +20,21 @@ An interactive 3D brain puzzle with multiple versions showcasing different appro
 
 ## 🌟 Version Highlights
 
-### V8 - 25 Pieces with Instant Explosion (Latest) ⭐
+### V9 - Matrix Spiral Explosion (Latest) ⭐
+**Location:** `/brain-ui-v9/`
+
+Epic two-stage explosion effect:
+- 💥 **TRUE instant explosion** - All pieces move from frame 1 (removed delay check)
+- 🌀 **Matrix spiral** - Code threads spiral away after pieces
+- ✨ **Golden angle** - 137.5° distribution for beautiful patterns
+- ⏱️ **Perfect timing** - 4.5s delay, then 2.5s spiral
+- 🎭 **Multi-stage** - Puzzle → Matrix → Green glow reveal
+- 🔤 **MIFF branding** - Embedded throughout
+
+### V8 - 25 Pieces with Instant Explosion
 **Location:** `/brain-ui-v8/`
 
-Perfect balance of size and drama:
+Balance of size and drama:
 - 🧩 **25 pieces (5×5)** - Larger, more visible
 - 💥 **Instant explosion** - All pieces fly away simultaneously
 - ⭐ **Huge clicked piece** - 25x scale, fills half the screen
