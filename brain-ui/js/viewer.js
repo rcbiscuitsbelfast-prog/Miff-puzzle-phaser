@@ -162,20 +162,23 @@ export class BrainViewer {
                 // Clone geometry
                 const overlayGeometry = child.geometry.clone();
                 
-                // Create green shader material with flowing edge effect
+                // Create Matrix-style shader material with falling code rain
                 const overlayMaterial = new THREE.ShaderMaterial({
                     uniforms: {
                         time: { value: 0 },
-                        baseColor: { value: new THREE.Color(0x00ff44) }, // Vibrant green
+                        matrixColor: { value: new THREE.Color(0x00ff41) }, // Matrix green
+                        glowColor: { value: new THREE.Color(0x00ff88) },
                     },
                     vertexShader: `
                         varying vec3 vNormal;
                         varying vec3 vPosition;
                         varying vec3 vWorldPosition;
+                        varying vec2 vUv;
                         
                         void main() {
                             vNormal = normalize(normalMatrix * normal);
                             vPosition = position;
+                            vUv = uv;
                             
                             vec4 worldPos = modelMatrix * vec4(position, 1.0);
                             vWorldPosition = worldPos.xyz;
@@ -185,32 +188,54 @@ export class BrainViewer {
                     `,
                     fragmentShader: `
                         uniform float time;
-                        uniform vec3 baseColor;
+                        uniform vec3 matrixColor;
+                        uniform vec3 glowColor;
                         varying vec3 vNormal;
                         varying vec3 vPosition;
                         varying vec3 vWorldPosition;
+                        varying vec2 vUv;
+                        
+                        // Pseudo-random function
+                        float random(vec2 st) {
+                            return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
+                        }
                         
                         void main() {
                             // Calculate view direction for Fresnel effect
                             vec3 viewDirection = normalize(cameraPosition - vWorldPosition);
                             
-                            // Fresnel effect - glow on edges (softer)
-                            float fresnel = pow(1.0 - abs(dot(viewDirection, vNormal)), 2.5);
+                            // Fresnel effect - glow on edges
+                            float fresnel = pow(1.0 - abs(dot(viewDirection, vNormal)), 2.0);
                             
-                            // Flowing effect using position and time
-                            float flow = sin(vWorldPosition.y * 3.0 + vWorldPosition.x * 2.0 + time * 2.0) * 0.3 + 0.7;
+                            // Create matrix rain effect
+                            vec2 grid = floor(vWorldPosition.xy * 20.0); // Grid for "characters"
+                            float columnRandom = random(vec2(grid.x, 0.0));
                             
-                            // Keep consistent green - just vary intensity slightly
-                            vec3 finalColor = baseColor * flow;
+                            // Falling rain
+                            float rainSpeed = 2.0 + columnRandom * 3.0;
+                            float rain = fract(vWorldPosition.y * 10.0 - time * rainSpeed + columnRandom * 100.0);
                             
-                            // Add bright edge glow (consistent green)
-                            finalColor += baseColor * fresnel * 1.5;
+                            // Make rain drops
+                            float rainIntensity = smoothstep(0.9, 1.0, rain) * (1.0 - smoothstep(0.0, 0.1, rain));
                             
-                            // Ensure color stays in green spectrum
-                            finalColor = max(finalColor, baseColor * 0.6); // Minimum brightness
+                            // Add random flickering characters
+                            float charFlicker = step(0.7, random(grid + floor(time * 5.0))) * 0.3;
+                            
+                            // Combine effects
+                            float brightness = rainIntensity + charFlicker + 0.5;
+                            
+                            // Matrix green color with variation
+                            vec3 finalColor = mix(matrixColor, glowColor, rainIntensity * 0.5);
+                            finalColor *= brightness;
+                            
+                            // Add edge glow
+                            finalColor += glowColor * fresnel * 1.2;
+                            
+                            // Ensure minimum brightness to cover brain
+                            finalColor = max(finalColor, matrixColor * 0.6);
                             
                             // Full opacity to cover brain completely
-                            float alpha = 0.95;
+                            float alpha = 0.98;
                             
                             gl_FragColor = vec4(finalColor, alpha);
                         }
@@ -219,7 +244,7 @@ export class BrainViewer {
                     side: THREE.DoubleSide, // Render both sides to cover everything
                     depthWrite: false,
                     depthTest: true,
-                    blending: THREE.NormalBlending // Normal blending for consistent color
+                    blending: THREE.NormalBlending
                 });
                 
                 // Create overlay mesh
@@ -228,7 +253,7 @@ export class BrainViewer {
                 // Copy transform from original mesh
                 overlayMesh.position.copy(child.position);
                 overlayMesh.rotation.copy(child.rotation);
-                overlayMesh.scale.copy(child.scale).multiplyScalar(1.05); // Larger to fully cover and stand out
+                overlayMesh.scale.copy(child.scale).multiplyScalar(1.08); // Even larger to fully cover all red
                 
                 // Store reference for animation
                 if (!this.greenOverlay) {
