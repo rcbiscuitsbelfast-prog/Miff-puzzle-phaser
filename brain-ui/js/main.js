@@ -1,14 +1,13 @@
 /**
  * Main application entry point
- * Initializes the 3D viewer and overlay system
+ * Initializes the 3D viewer
  */
 
 import { BrainViewer } from './viewer.js';
-import { PuzzleOverlay } from './overlay.js';
 
 // Wait for DOM to be ready
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('Initializing 3D Brain Puzzle...');
+    console.log('Initializing 3D Brain Viewer...');
     
     const loadingScreen = document.getElementById('loading-screen');
     
@@ -19,22 +18,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Load brain model
         await viewer.loadBrainModel();
         
-        // Initialize overlay system
-        const overlay = new PuzzleOverlay(viewer);
-        
         // Start animation loop
         viewer.start();
         
         // Hide loading screen
         setTimeout(() => {
             loadingScreen.classList.add('hidden');
-            console.log('Ready! Click and drag to rotate, tap pieces to explore.');
+            console.log('Ready! Click and drag to rotate the brain model.');
         }, 500);
         
         // Store globally for debugging
         window.brainApp = {
-            viewer,
-            overlay
+            viewer
         };
         
     } catch (error) {
