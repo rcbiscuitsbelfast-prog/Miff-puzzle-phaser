@@ -13,11 +13,16 @@ export class BrainViewer {
         this.brainModel = null;
         this.greenOverlay = [];
         this.matrixOverlay = [];
+        this.puzzlePieces = [];
         this.clock = new THREE.Clock();
         this.overlayTime = 0;
         this.matrixCanvas = null;
         this.matrixTexture = null;
         this.matrixCtx = null;
+        this.raycaster = new THREE.Raycaster();
+        this.mouse = new THREE.Vector2();
+        this.piecesSolved = 0;
+        this.totalPieces = 9;
         
         this.init();
         this.setupEventListeners();
@@ -150,6 +155,9 @@ export class BrainViewer {
             
             // Add green overlay after adding brain
             this.addGreenOverlay(this.brainModel);
+            
+            // Add puzzle pieces overlay
+            this.addPuzzlePieces(this.brainModel);
             
             console.log('Brain model loaded successfully');
             return this.brainModel;
@@ -292,7 +300,7 @@ export class BrainViewer {
                 const glowMesh = new THREE.Mesh(overlayGeometry.clone(), glowMaterial);
                 glowMesh.position.copy(child.position);
                 glowMesh.rotation.copy(child.rotation);
-                glowMesh.scale.copy(child.scale).multiplyScalar(1.12); // Slightly smaller than matrix layer
+                glowMesh.scale.copy(child.scale).multiplyScalar(1.22); // Green glow base layer
                 
                 this.greenOverlay.push(glowMesh);
                 
@@ -316,7 +324,7 @@ export class BrainViewer {
                 const matrixMesh = new THREE.Mesh(overlayGeometry.clone(), matrixMaterial);
                 matrixMesh.position.copy(child.position);
                 matrixMesh.rotation.copy(child.rotation);
-                matrixMesh.scale.copy(child.scale).multiplyScalar(1.15); // Larger to cover everything
+                matrixMesh.scale.copy(child.scale).multiplyScalar(1.25); // Matrix letters top layer
                 
                 this.matrixOverlay.push(matrixMesh);
                 
@@ -331,9 +339,172 @@ export class BrainViewer {
         console.log('Green glow layer + Matrix letters overlay added');
     }
 
+    addPuzzlePieces(brainModel) {
+        // Get bounding box to position puzzle pieces around brain
+        const box = new THREE.Box3().setFromObject(brainModel);
+        const size = box.getSize(new THREE.Vector3());
+        const center = box.getCenter(new THREE.Vector3());
+        
+        // 9 puzzle piece positions (3x3 grid around the brain)
+        const puzzlePositions = [
+            { x: -1, y: 1, z: 0 },   // Top-left
+            { x: 0, y: 1, z: 0 },    // Top-center
+            { x: 1, y: 1, z: 0 },    // Top-right
+            
+            { x: -1, y: 0, z: 0 },   // Middle-left
+            { x: 0, y: 0, z: 0.5 },  // Center-front
+            { x: 1, y: 0, z: 0 },    // Middle-right
+            
+            { x: -1, y: -0.5, z: 0 }, // Bottom-left
+            { x: 0, y: -0.5, z: -0.5 }, // Bottom-back
+            { x: 1, y: -0.5, z: 0 },  // bottom-right
+        ];
+        
+        const colors = [
+            0xff6b6b, 0x4ecdc4, 0x95e1d3,
+            0xf38181, 0xaa96da, 0xfcbad3,
+            0xffffd2, 0xa8dadc, 0xe63946
+        ];
+        
+        puzzlePositions.forEach((pos, index) => {
+            // Create clickable sphere for each puzzle piece
+            const geometry = new THREE.SphereGeometry(0.15, 16, 16);
+            const material = new THREE.MeshBasicMaterial({
+                color: colors[index],
+                transparent: true,
+                opacity: 0.6,
+                emissive: colors[index],
+                emissiveIntensity: 0.3
+            });
+            
+            const piece = new THREE.Mesh(geometry, material);
+            
+            // Position around brain
+            const radius = size.length() * 0.7;
+            piece.position.set(
+                center.x + pos.x * radius * 0.5,
+                center.y + pos.y * radius * 0.5,
+                center.z + pos.z * radius * 0.5
+            );
+            
+            piece.userData = {
+                pieceIndex: index,
+                isSolved: false,
+                isPuzzlePiece: true,
+                originalColor: colors[index],
+                pulsePhase: Math.random() * Math.PI * 2
+            };
+            
+            this.puzzlePieces.push(piece);
+            this.scene.add(piece);
+        });
+        
+        console.log('9 puzzle pieces added around brain');
+    }
+
+    onPieceClick(piece) {
+        if (piece.userData.isSolved) return;
+        
+        // Mark as solved
+        piece.userData.isSolved = true;
+        this.piecesSolved++;
+        
+        // Visual feedback - pulse and fade
+        const startTime = Date.now();
+        const duration = 500;
+        
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = elapsed / duration;
+            
+            if (progress < 1) {
+                const scale = 1 + Math.sin(progress * Math.PI) * 0.5;
+                piece.scale.setScalar(scale);
+                piece.material.opacity = 0.6 * (1 - progress);
+                requestAnimationFrame(animate);
+            } else {
+                piece.visible = false;
+                
+                // Check if puzzle complete
+                if (this.piecesSolved === this.totalPieces) {
+                    this.onPuzzleComplete();
+                }
+            }
+        };
+        
+        animate();
+        
+        console.log(`Piece ${piece.userData.pieceIndex + 1}/${this.totalPieces} solved!`);
+        
+        // Update counter
+        const counter = document.getElementById('piece-counter');
+        if (counter) {
+            counter.textContent = `${this.piecesSolved}/${this.totalPieces}`;
+        }
+    }
+
+    onPuzzleComplete() {
+        console.log('🎉 Puzzle Complete!');
+        
+        // Show completion message
+        const message = document.createElement('div');
+        message.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 255, 68, 0.95);
+            color: white;
+            padding: 30px 60px;
+            border-radius: 20px;
+            font-size: 32px;
+            font-weight: bold;
+            z-index: 1000;
+            box-shadow: 0 0 30px rgba(0, 255, 68, 0.8);
+            text-align: center;
+            animation: pulse 0.5s ease-in-out infinite alternate;
+        `;
+        message.innerHTML = '🧠 Brain Puzzle Complete! 🧠';
+        
+        document.body.appendChild(message);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            message.remove();
+        }, 3000);
+    }
+
+    handleClick(event) {
+        // Calculate mouse position
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        
+        // Raycast to find clicked puzzle pieces
+        this.raycaster.setFromCamera(this.mouse, this.camera);
+        const intersects = this.raycaster.intersectObjects(this.puzzlePieces);
+        
+        if (intersects.length > 0) {
+            const piece = intersects[0].object;
+            if (piece.userData.isPuzzlePiece && !piece.userData.isSolved) {
+                this.onPieceClick(piece);
+            }
+        }
+    }
+
     setupEventListeners() {
         // Window resize
         window.addEventListener('resize', () => this.onWindowResize(), false);
+        
+        // Click/touch for puzzle pieces
+        this.renderer.domElement.addEventListener('click', (e) => this.handleClick(e), false);
+        this.renderer.domElement.addEventListener('touchend', (e) => {
+            if (e.changedTouches && e.changedTouches[0]) {
+                const touch = e.changedTouches[0];
+                const clickEvent = { clientX: touch.clientX, clientY: touch.clientY };
+                this.handleClick(clickEvent);
+            }
+        }, false);
     }
 
     onWindowResize() {
@@ -359,6 +530,16 @@ export class BrainViewer {
         
         // Update Matrix canvas texture
         this.updateMatrixCanvas();
+        
+        // Animate puzzle pieces (pulsing)
+        this.puzzlePieces.forEach((piece) => {
+            if (!piece.userData.isSolved && piece.visible) {
+                piece.userData.pulsePhase += 0.05;
+                const pulse = Math.sin(piece.userData.pulsePhase) * 0.2 + 1;
+                piece.scale.setScalar(pulse);
+                piece.material.emissiveIntensity = 0.3 + Math.sin(piece.userData.pulsePhase) * 0.2;
+            }
+        });
         
         // Update controls
         this.controls.update();
