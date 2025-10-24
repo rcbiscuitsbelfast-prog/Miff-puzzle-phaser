@@ -214,6 +214,12 @@ export class BrainViewer {
     }
 
     generatePuzzleColors(count) {
+        // Ensure color palettes are initialized
+        if (!this.leftBrainColors || !this.rightBrainColors) {
+            this.leftBrainColors = this.generateColorPalette('warm');
+            this.rightBrainColors = this.generateColorPalette('cool');
+        }
+        
         // Combine left and right brain colors
         const colors = [];
         const halfCount = Math.ceil(count / 2);
