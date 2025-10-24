@@ -148,11 +148,8 @@ export class BrainViewer {
             
             this.scene.add(this.brainModel);
             
-            // Add green overlay after adding brain
-            this.addGreenOverlay(this.brainModel);
-            
-            // Add puzzle pieces overlay
-            this.addPuzzlePieces(this.brainModel);
+            // Add all overlay layers
+            this.addOverlays(this.brainModel);
             
             console.log('Brain model loaded successfully');
             return this.brainModel;
