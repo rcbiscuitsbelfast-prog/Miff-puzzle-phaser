@@ -7,7 +7,8 @@ An interactive 3D brain puzzle with multiple versions showcasing different appro
 ## 🎯 Quick Links
 
 - **[Version Selector](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/)** - Choose from 7 different versions
-- **[V7 - Latest](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v7/)** - Puzzle shapes with special click (⭐ Recommended)
+- **[V8 - Latest](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v8/)** - 25 pieces, instant explosion (⭐ Recommended)
+- **[V7 - Puzzle Shapes](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v7/)** - Special clicked piece
 - **[V6 - Full Coverage](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v6/)** - Dual-colored hemispheres
 - **[V5 - MIFF Edition](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v5/)** - 64 pieces with MIFF branding
 - **[V4 - Enhanced](https://rcbiscuitsbelfast-prog.github.io/Miff-puzzle-phaser/brain-ui-v4/)** - 36 pieces auto-rotating
@@ -18,10 +19,21 @@ An interactive 3D brain puzzle with multiple versions showcasing different appro
 
 ## 🌟 Version Highlights
 
-### V7 - Puzzle Shapes with Special Click (Latest) ⭐
+### V8 - 25 Pieces with Instant Explosion (Latest) ⭐
+**Location:** `/brain-ui-v8/`
+
+Perfect balance of size and drama:
+- 🧩 **25 pieces (5×5)** - Larger, more visible
+- 💥 **Instant explosion** - All pieces fly away simultaneously
+- ⭐ **Huge clicked piece** - 25x scale, fills half the screen
+- 🎨 **No color mirroring** - Checkerboard pattern
+- 📐 **Larger overlays** - Better visibility (+0.1, puzzle +0.2)
+- 🔤 **MIFF Matrix branding** - Embedded throughout
+
+### V7 - Puzzle Shapes with Special Click
 **Location:** `/brain-ui-v7/`
 
-The ultimate puzzle experience with ACTUAL jigsaw piece shapes:
+Jigsaw piece shapes with special animation:
 - 🧩 **Real puzzle shapes** - Tabs and blanks, not squares!
 - 🎨 **Front/back coloring** - Warm front, cool back (not mirrored)
 - ⭐ **Special clicked piece** - Floats toward you, enlarges to half-screen
