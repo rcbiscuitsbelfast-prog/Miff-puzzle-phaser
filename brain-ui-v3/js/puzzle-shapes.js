@@ -102,6 +102,7 @@ export class PuzzleShapeGenerator {
 
     /**
      * Create a Bezier curve path for an edge with tab or blank
+     * Enhanced with more pronounced puzzle piece shapes
      */
     createEdgePath(x1, y1, x2, y2, isTab, tabSize, orientation) {
         const dx = x2 - x1;
@@ -118,40 +119,61 @@ export class PuzzleShapeGenerator {
             perpY = 0;
         }
         
-        const tabDepth = length * tabSize;
-        const tabWidth = length * tabSize * 1.5;
+        // Make tabs more pronounced
+        const tabDepth = length * 0.35; // Increased from tabSize to 0.35 for bigger tabs
+        const neckWidth = 0.25; // Width of the neck connecting to tab
         
         // Calculate key points along the edge
         const mid = 0.5;
         const midX = x1 + dx * mid;
         const midY = y1 + dy * mid;
         
-        // Tab/blank start and end
-        const tabStart = mid - tabSize * 0.6;
-        const tabEnd = mid + tabSize * 0.6;
+        // Tab/blank start and end - narrower neck
+        const tabStart = mid - neckWidth;
+        const tabEnd = mid + neckWidth;
         
         const x_start = x1 + dx * tabStart;
         const y_start = y1 + dy * tabStart;
         const x_end = x1 + dx * tabEnd;
         const y_end = y1 + dy * tabEnd;
         
-        // Control points for tab/blank
-        const c1x = x_start + perpX * tabDepth * 0.1;
-        const c1y = y_start + perpY * tabDepth * 0.1;
+        // Create classic jigsaw puzzle shape with circular tab
+        // Points for the tab circle
+        const tabCenterX = midX + perpX * tabDepth * 0.6;
+        const tabCenterY = midY + perpY * tabDepth * 0.6;
         
-        const c2x = midX - dx * 0.15 + perpX * tabDepth * 0.8;
-        const c2y = midY - dy * 0.15 + perpY * tabDepth * 0.8;
+        // Control points for smoother, rounder tab
+        const c1x = x_start + perpX * tabDepth * 0.05;
+        const c1y = y_start + perpY * tabDepth * 0.05;
         
-        const c3x = midX + perpX * tabDepth;
-        const c3y = midY + perpY * tabDepth;
+        const c2x = x_start - dx * 0.05 + perpX * tabDepth * 0.5;
+        const c2y = y_start - dy * 0.05 + perpY * tabDepth * 0.5;
         
-        const c4x = midX + dx * 0.15 + perpX * tabDepth * 0.8;
-        const c4y = midY + dy * 0.15 + perpY * tabDepth * 0.8;
+        // Left side of circle
+        const leftX = tabCenterX - (orientation === 'horizontal' ? 0 : tabDepth * 0.4);
+        const leftY = tabCenterY - (orientation === 'horizontal' ? tabDepth * 0.4 : 0);
         
-        const c5x = x_end + perpX * tabDepth * 0.1;
-        const c5y = y_end + perpY * tabDepth * 0.1;
+        // Top of circle  
+        const topX = tabCenterX + perpX * tabDepth * 0.35;
+        const topY = tabCenterY + perpY * tabDepth * 0.35;
         
-        return `L ${x_start} ${y_start} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${c3x} ${c3y} C ${c4x} ${c4y}, ${c5x} ${c5y}, ${x_end} ${y_end} L ${x2} ${y2}`;
+        // Right side of circle
+        const rightX = tabCenterX + (orientation === 'horizontal' ? 0 : tabDepth * 0.4);
+        const rightY = tabCenterY + (orientation === 'horizontal' ? tabDepth * 0.4 : 0);
+        
+        const c3x = x_end + dx * 0.05 + perpX * tabDepth * 0.5;
+        const c3y = y_end + dy * 0.05 + perpY * tabDepth * 0.5;
+        
+        const c4x = x_end + perpX * tabDepth * 0.05;
+        const c4y = y_end + perpY * tabDepth * 0.05;
+        
+        // Build path with smooth circular tab
+        return `L ${x_start} ${y_start} ` +
+               `C ${c1x} ${c1y}, ${c2x} ${c2y}, ${leftX} ${leftY} ` +
+               `Q ${tabCenterX} ${tabCenterY}, ${topX} ${topY} ` +
+               `Q ${tabCenterX + perpX * tabDepth * 0.2} ${tabCenterY + perpY * tabDepth * 0.2}, ${rightX} ${rightY} ` +
+               `C ${c3x} ${c3y}, ${c4x} ${c4y}, ${x_end} ${y_end} ` +
+               `L ${x2} ${y2}`;
     }
 
     /**

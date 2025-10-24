@@ -25,9 +25,9 @@ export class BrainViewer {
         this.mouse = new THREE.Vector2();
         this.puzzleExploded = false;
         
-        // Puzzle configuration: 5x5 grid = 25 pieces
-        this.puzzleRows = 5;
-        this.puzzleCols = 5;
+        // Puzzle configuration: 6x6 grid = 36 pieces (more pieces = smaller individual pieces)
+        this.puzzleRows = 6;
+        this.puzzleCols = 6;
         this.puzzleGenerator = null;
         
         this.init();
@@ -44,7 +44,7 @@ export class BrainViewer {
         // Camera - adjusted for better viewing
         const aspect = window.innerWidth / window.innerHeight;
         this.camera = new THREE.PerspectiveCamera(50, aspect, 0.01, 100);
-        this.camera.position.set(0, 0, 3);
+        this.camera.position.set(0, 0, 4.5); // Zoomed out more to fit puzzle pieces
 
         // Renderer
         this.renderer = new THREE.WebGLRenderer({ 
@@ -63,10 +63,11 @@ export class BrainViewer {
         // Orbit Controls - simplified to prevent jittering
         this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
         this.controls.enableDamping = false;  // Disabled - can cause jitter
-        this.controls.minDistance = 1.5;
-        this.controls.maxDistance = 8;
+        this.controls.minDistance = 2.0;
+        this.controls.maxDistance = 10;
         this.controls.enablePan = true;
-        this.controls.autoRotate = false;     // Disabled - can conflict with interaction
+        this.controls.autoRotate = true;      // Enable auto-rotation
+        this.controls.autoRotateSpeed = 1.0;  // Slow, smooth rotation
         
         // Limit vertical rotation - prevent looking from underneath
         this.controls.minPolarAngle = 0;           // Top limit
@@ -398,7 +399,7 @@ export class BrainViewer {
                 const glowMesh = new THREE.Mesh(overlayGeometry.clone(), glowMaterial);
                 glowMesh.position.copy(child.position);
                 glowMesh.rotation.copy(child.rotation);
-                glowMesh.scale.copy(child.scale).multiplyScalar(1.22);
+                glowMesh.scale.copy(child.scale).multiplyScalar(1.32); // Increased from 1.22 to 1.32 (10% larger)
                 this.greenOverlay.push(glowMesh);
                 
                 if (child.parent) child.parent.add(glowMesh);
@@ -418,7 +419,7 @@ export class BrainViewer {
                 const matrixMesh = new THREE.Mesh(overlayGeometry.clone(), matrixMaterial);
                 matrixMesh.position.copy(child.position);
                 matrixMesh.rotation.copy(child.rotation);
-                matrixMesh.scale.copy(child.scale).multiplyScalar(1.25);
+                matrixMesh.scale.copy(child.scale).multiplyScalar(1.35); // Increased from 1.25 to 1.35 (10% larger)
                 this.matrixOverlay.push(matrixMesh);
                 
                 if (child.parent) child.parent.add(matrixMesh);
@@ -505,7 +506,7 @@ export class BrainViewer {
                     const pieceMesh = new THREE.Mesh(overlayGeometry.clone(), pieceMaterial);
                     pieceMesh.position.copy(child.position);
                     pieceMesh.rotation.copy(child.rotation);
-                    pieceMesh.scale.copy(child.scale).multiplyScalar(1.28);
+                    pieceMesh.scale.copy(child.scale).multiplyScalar(1.38); // Increased from 1.28 to 1.38 (10% larger)
                     
                     pieceMesh.userData.isPuzzlePiece = true;
                     pieceMesh.userData.pieceIndex = i;
