@@ -369,7 +369,7 @@ export class BrainViewer {
             }
         });
         
-        console.log('3 layers added: Green glow + Matrix letters + Jigsaw pattern');
+        console.log('3 layers added: Green glow (1.22x) + Matrix letters (1.25x) + Jigsaw puzzle (1.28x)');
     }
 
     REMOVE_createPuzzlePiecesForMesh(originalMesh, geometry, meshIndex) {
