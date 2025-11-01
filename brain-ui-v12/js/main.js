@@ -12,14 +12,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const loadingScreen = document.getElementById('loading-screen');
     
     try {
+        console.log('Step 1: Initializing viewer...');
         // Initialize viewer
         const viewer = new BrainViewer('container');
+        console.log('Step 2: Viewer initialized, loading brain model...');
         
         // Load brain model
         await viewer.loadBrainModel();
+        console.log('Step 3: Brain model loaded, starting animation...');
         
         // Start animation loop
         viewer.start();
+        console.log('Step 4: Animation started');
         
         // Hide loading screen
         setTimeout(() => {
@@ -34,7 +38,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         
     } catch (error) {
         console.error('Failed to initialize application:', error);
-        loadingScreen.querySelector('p').textContent = 'Error loading brain model. Please refresh.';
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
+        const errorMsg = loadingScreen.querySelector('p');
+        if (errorMsg) {
+            errorMsg.textContent = `Error: ${error.message || 'Failed to load brain model. Please refresh.'}`;
+            errorMsg.style.color = '#ff4444';
+        }
     }
 });
 

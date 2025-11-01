@@ -119,15 +119,29 @@ export class BrainViewer {
         const loader = new THREE.GLTFLoader();
         
         try {
+            console.log('GLTFLoader created, loading brain.glb...');
             const gltf = await new Promise((resolve, reject) => {
+                const modelPath = 'public/brain.glb';
+                console.log('Loading model from:', modelPath);
+                
                 loader.load(
-                    'public/brain.glb',
-                    resolve,
-                    (progress) => {
-                        const percent = (progress.loaded / progress.total) * 100;
-                        console.log(`Loading: ${percent.toFixed(0)}%`);
+                    modelPath,
+                    (gltf) => {
+                        console.log('Model loaded successfully:', gltf);
+                        resolve(gltf);
                     },
-                    reject
+                    (progress) => {
+                        if (progress.lengthComputable) {
+                            const percent = (progress.loaded / progress.total) * 100;
+                            console.log(`Loading: ${percent.toFixed(0)}%`);
+                        } else {
+                            console.log(`Loading: ${progress.loaded} bytes`);
+                        }
+                    },
+                    (error) => {
+                        console.error('GLTFLoader error:', error);
+                        reject(error);
+                    }
                 );
             });
 
@@ -566,10 +580,15 @@ export class BrainViewer {
                 
                 // LAYER 3: Create jigsaw puzzle pieces - use improved method
                 try {
-                    this.createPuzzlePiecesForMesh(child);
+                    if (typeof this.createPuzzlePiecesForMesh === 'function') {
+                        this.createPuzzlePiecesForMesh(child);
+                    } else {
+                        console.error('createPuzzlePiecesForMesh method not found!');
+                    }
                 } catch (puzzleError) {
                     console.error('Error creating puzzle pieces for mesh:', puzzleError);
-                    // Continue with other meshes
+                    console.error('Stack:', puzzleError.stack);
+                    // Continue with other meshes - don't let this stop the model from loading
                 }
                 
                 // Old code removed - now using createPuzzlePiecesForMesh method
