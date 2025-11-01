@@ -563,7 +563,6 @@ export class BrainViewer {
                             varying vec2 vUv;
                             varying vec3 vWorldPosition;
                             varying vec3 vNormal;
-                            varying vec3 vViewPosition;
                             
                             void main() {
                                 vUv = uv;
@@ -575,10 +574,7 @@ export class BrainViewer {
                                 vec4 worldPos = modelMatrix * vec4(extrudedPosition, 1.0);
                                 vWorldPosition = worldPos.xyz;
                                 
-                                vec4 viewPos = viewMatrix * worldPos;
-                                vViewPosition = viewPos.xyz;
-                                
-                                gl_Position = projectionMatrix * viewPos;
+                                gl_Position = projectionMatrix * modelViewMatrix * vec4(extrudedPosition, 1.0);
                             }
                         `,
                         fragmentShader: `
@@ -589,7 +585,6 @@ export class BrainViewer {
                             uniform float totalCols;
                             varying vec3 vWorldPosition;
                             varying vec3 vNormal;
-                            varying vec3 vViewPosition;
                             
                             void main() {
                                 // Map world position to grid - adjusted for brain size
@@ -681,16 +676,14 @@ export class BrainViewer {
                                 float NdotL = max(dot(vNormal, lightDir), 0.0);
                                 float lighting = 0.3 + 0.7 * NdotL; // Ambient + diffuse
                                 
-                                // Add specular highlight for more depth
-                                vec3 viewDir = normalize(vViewPosition);
-                                vec3 halfDir = normalize(lightDir + viewDir);
-                                float specular = pow(max(dot(vNormal, halfDir), 0.0), 32.0) * 0.3;
+                                // Add subtle specular highlight for depth (simplified to avoid viewDir issues)
+                                float specular = pow(NdotL, 64.0) * 0.2;
                                 
                                 // Piece color with lighting and depth variations
                                 vec3 color = pieceColor;
                                 color *= (0.85 + cellUV.x * 0.1 + cellUV.y * 0.1); // Subtle gradient
                                 color *= lighting; // Apply lighting
-                                color += specular; // Add specular highlight
+                                color += vec3(specular); // Add specular highlight
                                 color = mix(color, vec3(0.1), edge); // Darken edges
                                 
                                 gl_FragColor = vec4(color, 1.0);
