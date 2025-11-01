@@ -1103,12 +1103,9 @@ export class BrainViewer {
                                 float bezier = t * t * (3.0 - 2.0 * t); // Smoothstep
                                 float tabY = bezier * tabDepth;
                                 
-                                bool hasTab = mod(pieceCol, 2.0) < 0.5;
-                                if (hasTab) {
-                                    if (cellUV.y > tabY) discard;
-                                } else {
-                                    if (cellUV.y < tabY) discard;
-                                }
+                                float hasTab = step(0.5, mod(pieceCol, 2.0)); // 1.0 if tab, 0.0 if blank
+                                float tabCondition = step(cellUV.y, tabY) * (1.0 - hasTab) + step(tabY, cellUV.y) * hasTab;
+                                if (tabCondition < 0.5) discard;
                             }
                         }
                         
@@ -1120,12 +1117,9 @@ export class BrainViewer {
                                 float bezier = t * t * (3.0 - 2.0 * t);
                                 float tabY = 1.0 - bezier * tabDepth;
                                 
-                                bool hasTab = mod(pieceCol + 1.0, 2.0) < 0.5;
-                                if (hasTab) {
-                                    if (cellUV.y < tabY) discard;
-                                } else {
-                                    if (cellUV.y > tabY) discard;
-                                }
+                                float hasTab = step(0.5, mod(pieceCol + 1.0, 2.0));
+                                float tabCondition = step(tabY, cellUV.y) * (1.0 - hasTab) + step(cellUV.y, tabY) * hasTab;
+                                if (tabCondition < 0.5) discard;
                             }
                         }
                         
@@ -1137,12 +1131,9 @@ export class BrainViewer {
                                 float bezier = t * t * (3.0 - 2.0 * t);
                                 float tabX = bezier * tabDepth;
                                 
-                                bool hasTab = mod(pieceRow, 2.0) < 0.5;
-                                if (hasTab) {
-                                    if (cellUV.x > tabX) discard;
-                                } else {
-                                    if (cellUV.x < tabX) discard;
-                                }
+                                float hasTab = step(0.5, mod(pieceRow, 2.0));
+                                float tabCondition = step(tabX, cellUV.x) * (1.0 - hasTab) + step(cellUV.x, tabX) * hasTab;
+                                if (tabCondition < 0.5) discard;
                             }
                         }
                         
@@ -1154,12 +1145,9 @@ export class BrainViewer {
                                 float bezier = t * t * (3.0 - 2.0 * t);
                                 float tabX = 1.0 - bezier * tabDepth;
                                 
-                                bool hasTab = mod(pieceRow + 1.0, 2.0) < 0.5;
-                                if (hasTab) {
-                                    if (cellUV.x < tabX) discard;
-                                } else {
-                                    if (cellUV.x > tabX) discard;
-                                }
+                                float hasTab = step(0.5, mod(pieceRow + 1.0, 2.0));
+                                float tabCondition = step(cellUV.x, tabX) * (1.0 - hasTab) + step(tabX, cellUV.x) * hasTab;
+                                if (tabCondition < 0.5) discard;
                             }
                         }
                         
