@@ -133,9 +133,18 @@ export class BrainViewer {
                     (progress) => {
                         if (progress.lengthComputable) {
                             const percent = (progress.loaded / progress.total) * 100;
-                            console.log(`Loading: ${percent.toFixed(0)}%`);
+                            const statusEl = document.getElementById('loading-status');
+                            if (statusEl) {
+                                statusEl.textContent = `Loading: ${percent.toFixed(0)}%`;
+                            }
+                            if (window.console && console.log) {
+                                console.log(`Loading: ${percent.toFixed(0)}%`);
+                            }
                         } else {
-                            console.log(`Loading: ${progress.loaded} bytes`);
+                            const statusEl = document.getElementById('loading-status');
+                            if (statusEl) {
+                                statusEl.textContent = `Loading: ${(progress.loaded / 1024 / 1024).toFixed(1)} MB`;
+                            }
                         }
                     },
                     (error) => {
@@ -247,12 +256,14 @@ export class BrainViewer {
             
             this.scene.add(this.brainModel);
             
-            // Add all overlay layers
+            // Add all overlay layers - but don't let this block model loading
             try {
                 this.addOverlays(this.brainModel);
-                console.log('Brain model loaded successfully');
             } catch (overlayError) {
-                console.error('Error creating overlays:', overlayError);
+                // Log error but continue - model should still display
+                if (window.console && console.error) {
+                    console.error('Error creating overlays:', overlayError);
+                }
                 // Still return the model even if overlays fail
             }
             
@@ -494,14 +505,13 @@ export class BrainViewer {
     }
 
     addOverlays(brainModel) {
-        try {
-            // We'll divide the brain into puzzle pieces
-            let meshIndex = 0;
-            
-            brainModel.traverse((child) => {
-                if (child.isMesh && child.geometry) {
-                    try {
-                        const overlayGeometry = child.geometry.clone();
+        // We'll divide the brain into puzzle pieces
+        let meshIndex = 0;
+        
+        brainModel.traverse((child) => {
+            if (child.isMesh && child.geometry) {
+                try {
+                    const overlayGeometry = child.geometry.clone();
                 
                 // LAYER 1: Green glowy shader base (1.22x)
                 const glowMaterial = new THREE.ShaderMaterial({
@@ -579,17 +589,24 @@ export class BrainViewer {
                 else this.scene.add(matrixMesh);
                 
                 // LAYER 3: Create jigsaw puzzle pieces - use improved method
+                // Wrap in try-catch to prevent errors from stopping model display
                 try {
                     if (typeof this.createPuzzlePiecesForMesh === 'function') {
                         this.createPuzzlePiecesForMesh(child);
-                    } else {
-                        console.error('createPuzzlePiecesForMesh method not found!');
                     }
                 } catch (puzzleError) {
-                    console.error('Error creating puzzle pieces for mesh:', puzzleError);
-                    console.error('Stack:', puzzleError.stack);
-                    // Continue with other meshes - don't let this stop the model from loading
+                    // Silently continue - puzzle pieces are optional
+                    // Model will display without them if needed
                 }
+                
+                } catch (meshError) {
+                    // Continue with next mesh if this one fails
+                    if (window.console && console.error) {
+                        console.error('Error processing mesh:', meshError);
+                    }
+                }
+            }
+        });
                 
                 // Old code removed - now using createPuzzlePiecesForMesh method
                 /*

@@ -10,25 +10,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('Initializing 3D Brain Viewer...');
     
     const loadingScreen = document.getElementById('loading-screen');
+    const errorMsg = loadingScreen.querySelector('p');
+    
+    // Set a timeout to show error if loading takes too long
+    const loadingTimeout = setTimeout(() => {
+        if (loadingScreen && !loadingScreen.classList.contains('hidden')) {
+            errorMsg.textContent = 'Loading is taking longer than expected. Please check your connection and refresh.';
+            errorMsg.style.color = '#ff4444';
+        }
+        }
+    }, 30000); // 30 second timeout
     
     try {
-        console.log('Step 1: Initializing viewer...');
         // Initialize viewer
         const viewer = new BrainViewer('container');
-        console.log('Step 2: Viewer initialized, loading brain model...');
         
-        // Load brain model
-        await viewer.loadBrainModel();
-        console.log('Step 3: Brain model loaded, starting animation...');
+        // Load brain model with timeout
+        const loadPromise = viewer.loadBrainModel();
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Model loading timeout after 20 seconds')), 20000)
+        );
+        
+        await Promise.race([loadPromise, timeoutPromise]);
+        clearTimeout(loadingTimeout);
         
         // Start animation loop
         viewer.start();
-        console.log('Step 4: Animation started');
         
         // Hide loading screen
         setTimeout(() => {
             loadingScreen.classList.add('hidden');
-            console.log('Ready! Click and drag to rotate the brain model.');
         }, 500);
         
         // Store globally for debugging
@@ -37,16 +48,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
         
     } catch (error) {
-        console.error('Failed to initialize application:', error);
-        console.error('Error details:', {
-            message: error.message,
-            stack: error.stack,
-            name: error.name
-        });
-        const errorMsg = loadingScreen.querySelector('p');
-        if (errorMsg) {
-            errorMsg.textContent = `Error: ${error.message || 'Failed to load brain model. Please refresh.'}`;
-            errorMsg.style.color = '#ff4444';
+        clearTimeout(loadingTimeout);
+        const errorText = error.message || 'Failed to load brain model. Please refresh the page.';
+        errorMsg.textContent = `Error: ${errorText}`;
+        errorMsg.style.color = '#ff4444';
+        errorMsg.style.fontWeight = 'bold';
+        
+        // Also log to console if available
+        if (window.console && console.error) {
+            console.error('Failed to initialize application:', error);
         }
     }
 });
