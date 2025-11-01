@@ -10,14 +10,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('Initializing 3D Brain Viewer...');
     
     const loadingScreen = document.getElementById('loading-screen');
-    const errorMsg = loadingScreen.querySelector('p');
+    const errorMsg = document.getElementById('loading-text') || loadingScreen.querySelector('p');
     
     // Set a timeout to show error if loading takes too long
     const loadingTimeout = setTimeout(() => {
         if (loadingScreen && !loadingScreen.classList.contains('hidden')) {
-            errorMsg.textContent = 'Loading is taking longer than expected. Please check your connection and refresh.';
-            errorMsg.style.color = '#ff4444';
-        }
+            if (errorMsg) {
+                errorMsg.textContent = 'Loading is taking longer than expected. Please check your connection and refresh.';
+                errorMsg.style.color = '#ff4444';
+            }
         }
     }, 30000); // 30 second timeout
     
@@ -50,9 +51,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
         clearTimeout(loadingTimeout);
         const errorText = error.message || 'Failed to load brain model. Please refresh the page.';
-        errorMsg.textContent = `Error: ${errorText}`;
-        errorMsg.style.color = '#ff4444';
-        errorMsg.style.fontWeight = 'bold';
+        if (errorMsg) {
+            errorMsg.textContent = `Error: ${errorText}`;
+            errorMsg.style.color = '#ff4444';
+            errorMsg.style.fontWeight = 'bold';
+        }
         
         // Also log to console if available
         if (window.console && console.error) {
