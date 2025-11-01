@@ -590,9 +590,17 @@ export class BrainViewer {
                 
                 // LAYER 3: Create jigsaw puzzle pieces - use improved method
                 // Wrap in try-catch to prevent errors from stopping model display
+                // Temporarily simplified to ensure model loads
                 try {
                     if (typeof this.createPuzzlePiecesForMesh === 'function') {
-                        this.createPuzzlePiecesForMesh(child);
+                        // Add timeout to prevent hanging
+                        setTimeout(() => {
+                            try {
+                                this.createPuzzlePiecesForMesh(child);
+                            } catch (e) {
+                                // Ignore - puzzle pieces are optional
+                            }
+                        }, 0);
                     }
                 } catch (puzzleError) {
                     // Silently continue - puzzle pieces are optional
