@@ -178,33 +178,40 @@ body {
     animation: pulse 2s ease-in-out infinite;
 }
 
-/* Speed Control */
-#speed-control {
+/* Control Panel */
+#control-panel {
     position: fixed;
     bottom: 30px;
     left: 50%;
     transform: translateX(-50%);
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
-    padding: 15px 25px;
+    padding: 20px 30px;
     border-radius: 15px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     z-index: 10;
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 15px;
-    min-width: 250px;
-    transition: opacity 0.3s ease;
+    min-width: 300px;
+    max-width: 500px;
 }
 
-#speed-control label {
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.control-group label {
     font-size: 14px;
     color: #333;
     font-weight: 600;
     white-space: nowrap;
+    min-width: 120px;
 }
 
-#speed-control input[type="range"] {
+.control-group input[type="range"] {
     flex: 1;
     height: 6px;
     border-radius: 3px;
@@ -213,7 +220,7 @@ body {
     -webkit-appearance: none;
 }
 
-#speed-control input[type="range"]::-webkit-slider-thumb {
+.control-group input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
     width: 18px;
@@ -224,7 +231,7 @@ body {
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
-#speed-control input[type="range"]::-moz-range-thumb {
+.control-group input[type="range"]::-moz-range-thumb {
     width: 18px;
     height: 18px;
     border-radius: 50%;
@@ -234,28 +241,87 @@ body {
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
-#speed-control #speed-value {
+.control-group span {
     font-size: 14px;
     color: #667eea;
     font-weight: 700;
-    min-width: 40px;
+    min-width: 45px;
     text-align: right;
 }
 
+.control-group select {
+    flex: 1;
+    padding: 8px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    background: white;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.control-group select:hover {
+    border-color: #667eea;
+}
+
+.control-group select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.restart-button {
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+}
+
+.restart-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(102, 126, 234, 0.4);
+}
+
+.restart-button:active {
+    transform: translateY(0);
+}
+
 @media (max-width: 768px) {
-    #speed-control {
+    #control-panel {
         bottom: 20px;
-        padding: 12px 20px;
-        min-width: 200px;
+        padding: 15px 20px;
+        min-width: 280px;
+        gap: 12px;
+    }
+    
+    .control-group {
         gap: 10px;
     }
     
-    #speed-control label {
+    .control-group label {
         font-size: 12px;
+        min-width: 100px;
     }
     
-    #speed-control #speed-value {
+    .control-group span {
         font-size: 12px;
-        min-width: 35px;
+        min-width: 40px;
+    }
+    
+    .control-group select {
+        font-size: 12px;
+        padding: 6px 10px;
+    }
+    
+    .restart-button {
+        padding: 10px 20px;
+        font-size: 13px;
     }
 }

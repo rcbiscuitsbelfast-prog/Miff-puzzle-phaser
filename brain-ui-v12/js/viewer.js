@@ -26,7 +26,8 @@ export class BrainViewer {
         this.puzzleExploded = false;
         this.matrixExploding = false;
         this.matrixExplodeStart = 0;
-        this.explosionSpeedMultiplier = 1.0; // Speed control multiplier
+        this.explosionSpeedMultiplier = 0.6; // Speed control multiplier (default 0.6)
+        this.autoRotateSpeed = 1.0; // Spin speed multiplier
         this.greenMelting = false;
         this.greenMeltStart = 0;
         
@@ -77,7 +78,7 @@ export class BrainViewer {
         this.controls.maxDistance = 10;
         this.controls.enablePan = true;
         this.controls.autoRotate = true;      // Enable auto-rotation
-        this.controls.autoRotateSpeed = 1.0;  // Slow, smooth rotation
+        this.controls.autoRotateSpeed = 1.0 * this.autoRotateSpeed;  // Adjustable spin speed
         
         // Limit vertical rotation - prevent looking from underneath
         this.controls.minPolarAngle = 0;           // Top limit
@@ -180,18 +181,35 @@ export class BrainViewer {
                                 varying vec3 vPosition;
                                 
                                 void main() {
-                                    // Pulsating effect
-                                    float pulse = sin(time * pulseSpeed + vPosition.y * 2.0) * 0.5 + 0.5;
+                                    // Enhanced electric pulsating effect with multiple frequencies
+                                    float pulse1 = sin(time * pulseSpeed + vPosition.y * 2.0) * 0.5 + 0.5;
                                     float pulse2 = sin(time * pulseSpeed * 0.7 + vPosition.x * 3.0) * 0.5 + 0.5;
-                                    float combinedPulse = (pulse + pulse2) / 2.0;
+                                    float pulse3 = sin(time * pulseSpeed * 1.3 + vPosition.z * 2.5) * 0.5 + 0.5;
+                                    float combinedPulse = (pulse1 + pulse2 + pulse3) / 3.0;
                                     
-                                    // Fresnel for edge glow
+                                    // Electric wave effect - traveling waves across the surface
+                                    float wave1 = sin(vPosition.x * 5.0 + time * pulseSpeed * 2.0) * 0.5 + 0.5;
+                                    float wave2 = sin(vPosition.y * 5.0 + time * pulseSpeed * 1.5) * 0.5 + 0.5;
+                                    float electricWaves = (wave1 + wave2) / 2.0;
+                                    
+                                    // Combine pulsation and waves for more dynamic effect
+                                    float electricIntensity = (combinedPulse * 0.7 + electricWaves * 0.3);
+                                    
+                                    // Fresnel for edge glow - stronger for electric effect
                                     vec3 viewDirection = normalize(cameraPosition - vPosition);
-                                    float fresnel = pow(1.0 - abs(dot(viewDirection, vNormal)), 2.0);
+                                    float fresnel = pow(1.0 - abs(dot(viewDirection, vNormal)), 2.5);
                                     
-                                    // Mix base color with glow based on pulse
-                                    vec3 color = mix(baseColor, glowColor, combinedPulse * pulseIntensity);
-                                    color += glowColor * fresnel * 0.3;
+                                    // Electric glow effect - brighter edges
+                                    float electricGlow = electricIntensity * pulseIntensity;
+                                    electricGlow += fresnel * 0.5; // Stronger edge glow
+                                    
+                                    // Mix base color with electric glow
+                                    vec3 color = mix(baseColor, glowColor, electricGlow);
+                                    color += glowColor * fresnel * 0.6; // Enhanced edge glow
+                                    
+                                    // Add electric sparkle effect
+                                    float sparkle = step(0.95, fract(sin(vPosition.x * 100.0 + vPosition.y * 100.0 + time * pulseSpeed * 5.0) * 43758.5453));
+                                    color += sparkle * glowColor * 0.5;
                                     
                                     gl_FragColor = vec4(color, 1.0);
                                 }
@@ -538,8 +556,11 @@ export class BrainViewer {
                 if (child.parent) child.parent.add(matrixMesh);
                 else this.scene.add(matrixMesh);
                 
-                // LAYER 3: Create jigsaw puzzle pieces - FULL COVERAGE VERSION
-                // Use shader-based grid like V1.1 but with more pieces and dual colors
+                // LAYER 3: Create jigsaw puzzle pieces - use improved method
+                this.createPuzzlePiecesForMesh(child);
+                
+                // Old code removed - now using createPuzzlePiecesForMesh method
+                /*
                 const totalPieces = this.puzzleRows * this.puzzleCols;
                 
                 // Generate dual-colored palette (warm left, cool right)
@@ -699,6 +720,11 @@ export class BrainViewer {
                     pieceMesh.position.copy(child.position);
                     pieceMesh.rotation.copy(child.rotation);
                     pieceMesh.scale.copy(child.scale).multiplyScalar(1.60); // Increased larger for full coverage
+                    
+                    // Store original transform for restart
+                    pieceMesh.userData.originalPosition = pieceMesh.position.clone();
+                    pieceMesh.userData.originalRotation = pieceMesh.rotation.clone();
+                    pieceMesh.userData.originalScale = pieceMesh.scale.clone();
                     
                     pieceMesh.userData.isPuzzlePiece = true;
                     pieceMesh.userData.pieceIndex = i;
@@ -881,13 +907,14 @@ export class BrainViewer {
     setupSpeedControl() {
         // Wait for DOM to be ready before accessing elements
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => this.initSpeedControl());
+            document.addEventListener('DOMContentLoaded', () => this.initControls());
         } else {
-            this.initSpeedControl();
+            this.initControls();
         }
     }
     
-    initSpeedControl() {
+    initControls() {
+        // Explosion speed control
         const speedSlider = document.getElementById('explosion-speed');
         const speedValue = document.getElementById('speed-value');
         
@@ -900,7 +927,6 @@ export class BrainViewer {
                 if (this.puzzleExploded) {
                     this.jigsawPieces.forEach((piece) => {
                         if (piece.userData.animation) {
-                            // Adjust duration based on speed (faster speed = shorter duration)
                             const originalDuration = piece.userData.animation.originalDuration || piece.userData.animation.duration;
                             piece.userData.animation.originalDuration = originalDuration;
                             piece.userData.animation.duration = originalDuration / this.explosionSpeedMultiplier;
@@ -909,6 +935,313 @@ export class BrainViewer {
                 }
             });
         }
+        
+        // Spin speed control
+        const spinSlider = document.getElementById('spin-speed');
+        const spinValue = document.getElementById('spin-value');
+        
+        if (spinSlider && spinValue) {
+            spinSlider.addEventListener('input', (e) => {
+                this.autoRotateSpeed = parseFloat(e.target.value);
+                spinValue.textContent = this.autoRotateSpeed.toFixed(1) + 'x';
+                if (this.controls) {
+                    this.controls.autoRotateSpeed = 1.0 * this.autoRotateSpeed;
+                    if (this.autoRotateSpeed === 0) {
+                        this.controls.autoRotate = false;
+                    } else {
+                        this.controls.autoRotate = true;
+                    }
+                }
+            });
+        }
+        
+        // Puzzle size control
+        const puzzleSizeSelect = document.getElementById('puzzle-size');
+        if (puzzleSizeSelect) {
+            puzzleSizeSelect.addEventListener('change', (e) => {
+                const [rows, cols] = e.target.value.split('x').map(Number);
+                if (!this.puzzleExploded) {
+                    this.changePuzzleSize(rows, cols);
+                } else {
+                    alert('Please restart the puzzle first to change size.');
+                    // Reset to current size
+                    puzzleSizeSelect.value = `${this.puzzleRows}x${this.puzzleCols}`;
+                }
+            });
+        }
+        
+        // Restart button
+        const restartBtn = document.getElementById('restart-btn');
+        if (restartBtn) {
+            restartBtn.addEventListener('click', () => {
+                this.restart();
+            });
+        }
+    }
+    
+    createPuzzlePiecesForMesh(child) {
+        const overlayGeometry = child.geometry.clone();
+        const totalPieces = this.puzzleRows * this.puzzleCols;
+        const colors = this.generatePuzzleColors(totalPieces);
+        
+        for (let i = 0; i < totalPieces; i++) {
+            const row = Math.floor(i / this.puzzleCols);
+            const col = i % this.puzzleCols;
+            
+            // Create shader material
+            const pieceMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    time: { value: 0 },
+                    pieceColor: { value: new THREE.Color(colors[i]) },
+                    pieceRow: { value: row },
+                    pieceCol: { value: col },
+                    totalRows: { value: this.puzzleRows },
+                    totalCols: { value: this.puzzleCols }
+                },
+                vertexShader: `
+                    varying vec2 vUv;
+                    varying vec3 vWorldPosition;
+                    varying vec3 vNormal;
+                    
+                    void main() {
+                        vUv = uv;
+                        vNormal = normalize(normalMatrix * normal);
+                        
+                        // Extrude outward along normal for depth effect
+                        vec3 extrudedPosition = position + normal * 0.08;
+                        
+                        vec4 worldPos = modelMatrix * vec4(extrudedPosition, 1.0);
+                        vWorldPosition = worldPos.xyz;
+                        
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(extrudedPosition, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform vec3 pieceColor;
+                    uniform float pieceRow;
+                    uniform float pieceCol;
+                    uniform float totalRows;
+                    uniform float totalCols;
+                    varying vec3 vWorldPosition;
+                    varying vec3 vNormal;
+                    
+                    void main() {
+                        // Map world position to grid
+                        vec2 gridPos = (vWorldPosition.xy + 1.5) / 3.0;
+                        vec2 gridCoord = gridPos * vec2(totalCols, totalRows);
+                        vec2 gridCell = floor(gridCoord);
+                        
+                        float currentCol = mod(gridCell.x + totalCols * 10.0, totalCols);
+                        float currentRow = mod(gridCell.y + totalRows * 10.0, totalRows);
+                        
+                        if (abs(currentCol - pieceCol) > 0.01 || abs(currentRow - pieceRow) > 0.01) {
+                            discard;
+                        }
+                        
+                        vec2 cellUV = fract(gridCoord);
+                        
+                        // Improved puzzle piece shape with proper Bezier curves for tabs/blanks
+                        float puzzleShape = 1.0;
+                        float tabSize = 0.25;
+                        float tabDepth = 0.2;
+                        
+                        // Top edge
+                        if (cellUV.y < tabDepth) {
+                            float distFromMidX = abs(cellUV.x - 0.5);
+                            if (distFromMidX < tabSize) {
+                                // Create smoother tab/blank using Bezier-like curve
+                                float t = (distFromMidX / tabSize);
+                                float bezier = t * t * (3.0 - 2.0 * t); // Smoothstep
+                                float tabY = bezier * tabDepth;
+                                
+                                bool hasTab = mod(pieceCol, 2.0) < 0.5;
+                                if (hasTab) {
+                                    if (cellUV.y > tabY) discard;
+                                } else {
+                                    if (cellUV.y < tabY) discard;
+                                }
+                            }
+                        }
+                        
+                        // Bottom edge
+                        if (cellUV.y > 1.0 - tabDepth) {
+                            float distFromMidX = abs(cellUV.x - 0.5);
+                            if (distFromMidX < tabSize) {
+                                float t = (distFromMidX / tabSize);
+                                float bezier = t * t * (3.0 - 2.0 * t);
+                                float tabY = 1.0 - bezier * tabDepth;
+                                
+                                bool hasTab = mod(pieceCol + 1.0, 2.0) < 0.5;
+                                if (hasTab) {
+                                    if (cellUV.y < tabY) discard;
+                                } else {
+                                    if (cellUV.y > tabY) discard;
+                                }
+                            }
+                        }
+                        
+                        // Left edge
+                        if (cellUV.x < tabDepth) {
+                            float distFromMidY = abs(cellUV.y - 0.5);
+                            if (distFromMidY < tabSize) {
+                                float t = (distFromMidY / tabSize);
+                                float bezier = t * t * (3.0 - 2.0 * t);
+                                float tabX = bezier * tabDepth;
+                                
+                                bool hasTab = mod(pieceRow, 2.0) < 0.5;
+                                if (hasTab) {
+                                    if (cellUV.x > tabX) discard;
+                                } else {
+                                    if (cellUV.x < tabX) discard;
+                                }
+                            }
+                        }
+                        
+                        // Right edge
+                        if (cellUV.x > 1.0 - tabDepth) {
+                            float distFromMidY = abs(cellUV.y - 0.5);
+                            if (distFromMidY < tabSize) {
+                                float t = (distFromMidY / tabSize);
+                                float bezier = t * t * (3.0 - 2.0 * t);
+                                float tabX = 1.0 - bezier * tabDepth;
+                                
+                                bool hasTab = mod(pieceRow + 1.0, 2.0) < 0.5;
+                                if (hasTab) {
+                                    if (cellUV.x < tabX) discard;
+                                } else {
+                                    if (cellUV.x > tabX) discard;
+                                }
+                            }
+                        }
+                        
+                        // Lighting for depth
+                        vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));
+                        float NdotL = max(dot(vNormal, lightDir), 0.0);
+                        float lighting = 0.3 + 0.7 * NdotL;
+                        float specular = pow(NdotL, 64.0) * 0.2;
+                        
+                        // Edges
+                        float edgeThickness = 0.04;
+                        float edge = 0.0;
+                        if (cellUV.x < edgeThickness || cellUV.x > 1.0 - edgeThickness ||
+                            cellUV.y < edgeThickness || cellUV.y > 1.0 - edgeThickness) {
+                            edge = 0.4;
+                        }
+                        
+                        vec3 color = pieceColor;
+                        color *= (0.85 + cellUV.x * 0.1 + cellUV.y * 0.1);
+                        color *= lighting;
+                        color += vec3(specular);
+                        color = mix(color, vec3(0.1), edge);
+                        
+                        gl_FragColor = vec4(color, 1.0);
+                    }
+                `,
+                transparent: false,
+                side: THREE.DoubleSide,
+                depthWrite: true,
+                depthTest: true
+            });
+            
+            const pieceMesh = new THREE.Mesh(overlayGeometry.clone(), pieceMaterial);
+            pieceMesh.position.copy(child.position);
+            pieceMesh.rotation.copy(child.rotation);
+            pieceMesh.scale.copy(child.scale).multiplyScalar(1.60);
+            
+            pieceMesh.userData.originalPosition = pieceMesh.position.clone();
+            pieceMesh.userData.originalRotation = pieceMesh.rotation.clone();
+            pieceMesh.userData.originalScale = pieceMesh.scale.clone();
+            
+            pieceMesh.userData.isPuzzlePiece = true;
+            pieceMesh.userData.pieceIndex = i;
+            pieceMesh.userData.row = row;
+            pieceMesh.userData.col = col;
+            
+            this.jigsawPieces.push(pieceMesh);
+            
+            if (child.parent) child.parent.add(pieceMesh);
+            else this.scene.add(pieceMesh);
+        }
+    }
+    
+    changePuzzleSize(rows, cols) {
+        this.puzzleRows = rows;
+        this.puzzleCols = cols;
+        this.puzzleGenerator = new PuzzleShapeGenerator(rows, cols);
+        
+        // Clear existing pieces
+        this.jigsawPieces.forEach(piece => {
+            if (piece.parent) piece.parent.remove(piece);
+            else this.scene.remove(piece);
+        });
+        this.jigsawPieces = [];
+        
+        // Regenerate overlays
+        if (this.brainModel) {
+            this.brainModel.traverse((child) => {
+                if (child.isMesh && child.geometry) {
+                    this.createPuzzlePiecesForMesh(child);
+                }
+            });
+        }
+    }
+    
+    restart() {
+        // Reset explosion state
+        this.puzzleExploded = false;
+        this.matrixExploding = false;
+        this.greenMelting = false;
+        
+        // Reset green overlay
+        this.greenOverlay.forEach(mesh => {
+            mesh.visible = true;
+            if (mesh.material.uniforms && mesh.material.uniforms.opacity) {
+                mesh.material.uniforms.opacity.value = 0.85;
+            }
+            if (mesh.userData.greenMelt) {
+                mesh.position.copy(mesh.userData.greenMelt.startPos);
+            }
+        });
+        
+        // Reset matrix overlay
+        this.matrixOverlay.forEach(mesh => {
+            mesh.visible = true;
+            if (mesh.material.opacity !== undefined) {
+                mesh.material.opacity = 0.9;
+            }
+        });
+        
+        // Reset puzzle pieces
+        this.jigsawPieces.forEach(piece => {
+            piece.visible = true;
+            if (piece.userData.animation) {
+                delete piece.userData.animation;
+            }
+            // Reset position, rotation, scale
+            const originalPos = piece.userData.originalPosition || new THREE.Vector3(0, 0, 0);
+            const originalRot = piece.userData.originalRotation || new THREE.Euler(0, 0, 0);
+            const originalScale = piece.userData.originalScale || new THREE.Vector3(1, 1, 1);
+            
+            piece.position.copy(originalPos);
+            piece.rotation.copy(originalRot);
+            piece.scale.copy(originalScale);
+            
+            if (piece.material.uniforms && piece.material.opacity !== undefined) {
+                piece.material.opacity = 1.0;
+            }
+        });
+        
+        // Reset camera
+        this.camera.position.set(0, 0, 6);
+        this.controls.reset();
+        
+        // Show info panel
+        const infoPanel = document.getElementById('info-panel');
+        if (infoPanel) {
+            infoPanel.style.opacity = '1';
+        }
+        
+        console.log('?? Puzzle restarted!');
     }
     
     handleClick(event) {
