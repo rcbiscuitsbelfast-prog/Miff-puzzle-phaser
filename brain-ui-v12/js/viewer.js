@@ -234,12 +234,18 @@ export class BrainViewer {
             this.scene.add(this.brainModel);
             
             // Add all overlay layers
-            this.addOverlays(this.brainModel);
+            try {
+                this.addOverlays(this.brainModel);
+                console.log('Brain model loaded successfully');
+            } catch (overlayError) {
+                console.error('Error creating overlays:', overlayError);
+                // Still return the model even if overlays fail
+            }
             
-            console.log('Brain model loaded successfully');
             return this.brainModel;
         } catch (error) {
             console.error('Error loading brain model:', error);
+            console.error('Error stack:', error.stack);
             throw error;
         }
     }
@@ -474,12 +480,14 @@ export class BrainViewer {
     }
 
     addOverlays(brainModel) {
-        // We'll divide the brain into 9 puzzle regions (3x3 grid)
-        let meshIndex = 0;
-        
-        brainModel.traverse((child) => {
-            if (child.isMesh && child.geometry) {
-                const overlayGeometry = child.geometry.clone();
+        try {
+            // We'll divide the brain into puzzle pieces
+            let meshIndex = 0;
+            
+            brainModel.traverse((child) => {
+                if (child.isMesh && child.geometry) {
+                    try {
+                        const overlayGeometry = child.geometry.clone();
                 
                 // LAYER 1: Green glowy shader base (1.22x)
                 const glowMaterial = new THREE.ShaderMaterial({
@@ -557,7 +565,12 @@ export class BrainViewer {
                 else this.scene.add(matrixMesh);
                 
                 // LAYER 3: Create jigsaw puzzle pieces - use improved method
-                this.createPuzzlePiecesForMesh(child);
+                try {
+                    this.createPuzzlePiecesForMesh(child);
+                } catch (puzzleError) {
+                    console.error('Error creating puzzle pieces for mesh:', puzzleError);
+                    // Continue with other meshes
+                }
                 
                 // Old code removed - now using createPuzzlePiecesForMesh method
                 /*
