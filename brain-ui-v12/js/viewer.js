@@ -879,6 +879,15 @@ export class BrainViewer {
     }
     
     setupSpeedControl() {
+        // Wait for DOM to be ready before accessing elements
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.initSpeedControl());
+        } else {
+            this.initSpeedControl();
+        }
+    }
+    
+    initSpeedControl() {
         const speedSlider = document.getElementById('explosion-speed');
         const speedValue = document.getElementById('speed-value');
         
